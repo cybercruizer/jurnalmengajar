@@ -6,7 +6,7 @@ Aplikasi manajemen jurnal mengajar harian, presensi siswa, dan rekapitulasi data
 
 ## 🛠️ Fitur Utama
 - **Sistem Autentikasi Multi-Role**: Dukungan login terpisah untuk Siswa (Ketua Kelas), Guru Pengampu, dan Administrator Sekolah.
-- **Wizard Instalasi Interaktif**: Setup instansi sekolah baru, nama kepala sekolah, NIP/Kode kepala sekolah, dan konfigurasi database secara visual saat pertama kali dipasang.
+- **Konfigurasi Lingkungan yang Aman**: Setup melalui `.env` saja, dengan integrasi ORM berbasis produksi untuk keamanan pengelolaan skema database luring maupun daring.
 - **Dukungan Kode Guru**: Fleksibel untuk sekolah swasta yang tidak menggunakan NIP (Nomor Induk Pegawai), melainkan Kode Guru unik.
 - **Import Data Massal via CSV**: Memudahkan pendaftaran massal siswa, guru pengampu, serta mata pelajaran lengkap dengan petunjuk format kolom yang presisi.
 - **Cetak Laporan Siap Pakai**: Ekspor laporan harian, mingguan, maupun bulanan ke dalam format cetak fisik/PDF resmi lengkap dengan tanda tangan Kepala Sekolah.
@@ -52,9 +52,20 @@ DB_PASSWORD="your-strong-password"
 DB_NAME="jurnalku_smk"
 ```
 > **Catatan Penting**: 
-> Saat pertama kali Anda membuka aplikasi di browser, sistem akan menyajikan **Wizard Instalasi**. Konfigurasi database yang Anda isi di Wizard tersebut akan **otomatis disimpan ke dalam file `.env`** ini oleh backend server Node.js sehingga Anda tidak perlu mengedit file secara manual di server terminal.
+> Konfigurasi database sekarang dilakukan murni melalui file `.env`. Fitur Wizard Instalasi telah dihilangkan untuk menjaga keamanan lingkungan produksi. Pastikan Anda telah mengisi kredensial database PostgreSQL dengan benar sebelum menjalankan aplikasi.
 
-### 3. Pemasangan Dependensi
+### 3. Migrasi Struktur Database (Production-Ready)
+Aplikasi ini menggunakan `drizzle-orm` untuk manajemen skema database. Setelah mengkonfigurasi file `.env` dengan kredensial PostgreSQL yang valid, jalankan perintah migrasi untuk membangun tabel-tabel di database Anda:
+
+```bash
+npm run db:push
+```
+Atau jika Anda ingin melakukan seed data awal (opsional):
+```bash
+npm run db:seed
+```
+
+### 4. Pemasangan Dependensi
 Pasang semua paket pustaka yang dibutuhkan oleh sistem:
 ```bash
 npm install
