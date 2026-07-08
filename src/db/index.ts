@@ -8,6 +8,11 @@ dotenv.config();
 let pool: mysql.Pool | null = null;
 let db: any = null;
 
+export async function getPool() {
+  if (!pool) await getDb();
+  return pool as mysql.Pool;
+}
+
 export async function getDb() {
   if (!db) {
     pool = mysql.createPool({

@@ -45,14 +45,14 @@ export default function App() {
         if (result.success) {
           const dbData = result.data;
           if (dbData.sekolah) setSchoolInfo(dbData.sekolah);
-          if (dbData.users?.length) setUsers(dbData.users);
-          if (dbData.jurusan?.length) setJurusan(dbData.jurusan);
-          if (dbData.mapel?.length) setMapel(dbData.mapel);
-          if (dbData.kelas?.length) setKelas(dbData.kelas);
-          if (dbData.siswa?.length) setSiswa(dbData.siswa);
-          if (dbData.guru?.length) setGuru(dbData.guru);
-          if (dbData.guruMengampu?.length) setGuruMengampu(dbData.guruMengampu);
-          if (dbData.jurnal?.length) setJurnals(dbData.jurnal);
+          if (Array.isArray(dbData.users)) setUsers(dbData.users);
+          if (Array.isArray(dbData.jurusan)) setJurusan(dbData.jurusan);
+          if (Array.isArray(dbData.mapel)) setMapel(dbData.mapel);
+          if (Array.isArray(dbData.kelas)) setKelas(dbData.kelas);
+          if (Array.isArray(dbData.siswa)) setSiswa(dbData.siswa);
+          if (Array.isArray(dbData.guru)) setGuru(dbData.guru);
+          if (Array.isArray(dbData.guruMengampu)) setGuruMengampu(dbData.guruMengampu);
+          if (Array.isArray(dbData.jurnal)) setJurnals(dbData.jurnal);
         }
         setLoading(false);
       })
@@ -62,42 +62,68 @@ export default function App() {
       });
   }, []);
 
-  // Save changes to localStorage whenever state arrays update
+  const syncToDb = (tableName: string, data: any) => {
+    fetch(`/api/sync/${tableName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(err => console.error("Sync error:", err));
+  };
+
+  // Save changes to localStorage and DB whenever state arrays update
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_school_info', JSON.stringify(schoolInfo));
-  }, [schoolInfo]);
+    syncToDb('sekolah', [schoolInfo]);
+  }, [schoolInfo, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_users', JSON.stringify(users));
-  }, [users]);
+    syncToDb('users', users);
+  }, [users, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_jurusan', JSON.stringify(jurusan));
-  }, [jurusan]);
+    syncToDb('jurusan', jurusan);
+  }, [jurusan, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_mapel', JSON.stringify(mapel));
-  }, [mapel]);
+    syncToDb('mapel', mapel);
+  }, [mapel, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_kelas', JSON.stringify(kelas));
-  }, [kelas]);
+    syncToDb('kelas', kelas);
+  }, [kelas, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_siswa', JSON.stringify(siswa));
-  }, [siswa]);
+    syncToDb('siswa', siswa);
+  }, [siswa, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_guru', JSON.stringify(guru));
-  }, [guru]);
+    syncToDb('guru', guru);
+  }, [guru, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_mengampu', JSON.stringify(guruMengampu));
-  }, [guruMengampu]);
+    syncToDb('guruMengampu', guruMengampu);
+  }, [guruMengampu, loading]);
 
   useEffect(() => {
+    if (loading) return;
     localStorage.setItem('jurnal_db_jurnal_entries', JSON.stringify(jurnals));
-  }, [jurnals]);
+    syncToDb('jurnal', jurnals);
+  }, [jurnals, loading]);
 
   // -------------------------------------------------------------
   // ACTIVE SUBMENU NAVIGATION STATE

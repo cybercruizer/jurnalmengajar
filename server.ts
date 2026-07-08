@@ -166,6 +166,61 @@ async function startServer() {
     }
   });
 
+  // API Route for generic sync
+  app.post("/api/sync/:table", express.json({limit: "10mb"}), async (req, res) => {
+    try {
+      const { table } = req.params;
+      const data = req.body;
+      const { getDb, getPool } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { sql } = await import("drizzle-orm");
+
+      const tableSchema = (schema as any)[table];
+      if (!tableSchema) {
+        return res.status(400).json({ success: false, message: "Invalid table" });
+      }
+
+      if (!Array.isArray(data)) {
+        return res.status(400).json({ success: false, message: "Data must be an array" });
+      }
+
+      const pool = await getPool();
+      const conn = await pool.getConnection();
+
+      try {
+        await conn.query("SET FOREIGN_KEY_CHECKS=0");
+        
+        // Actually, we can get the actual table name from the schema definition
+        // Drizzle stores it somewhere, but we know the tables map 1:1 except for "guruMengampu" -> "guru_mengampu"
+        let actualTableName = table;
+        if (table === "guruMengampu") actualTableName = "guru_mengampu";
+
+        await conn.query(`TRUNCATE TABLE \`${actualTableName}\``);
+
+        if (data.length > 0) {
+          // Chunk inserts to avoid query size limits
+          const chunkSize = 50;
+          for (let i = 0; i < data.length; i += chunkSize) {
+            const chunk = data.slice(i, i + chunkSize);
+            await db.insert(tableSchema).values(chunk);
+          }
+        }
+
+        await conn.query("SET FOREIGN_KEY_CHECKS=1");
+        conn.release();
+        res.json({ success: true });
+      } catch (err: any) {
+        await conn.query("SET FOREIGN_KEY_CHECKS=1");
+        conn.release();
+        throw err;
+      }
+    } catch (error: any) {
+      console.error("Sync error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
