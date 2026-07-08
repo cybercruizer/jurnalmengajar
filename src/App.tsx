@@ -21,9 +21,7 @@ export default function App() {
   // -------------------------------------------------------------
   // DATABASE STORAGE SYNCS (localStorage with initialSeed fallbacks)
   // -------------------------------------------------------------
-  const [installed, setInstalled] = useState<boolean>(() => {
-    return localStorage.getItem('jurnal_installed') === 'true';
-  });
+  const [installed, setInstalled] = useState<boolean>(true);
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('jurnal_active_user');
@@ -32,47 +30,47 @@ export default function App() {
 
   const [schoolInfo, setSchoolInfo] = useState<Sekolah>(() => {
     const saved = localStorage.getItem('jurnal_school_info');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialSekolah : { nama: '', npsn: '', alamat: '', kepalaSekolah: '', nipKepalaSekolah: '', website: '', email: '' });
+    return saved ? JSON.parse(saved) : initialSekolah;
   });
 
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('jurnal_db_users');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialUsers : []);
+    return saved ? JSON.parse(saved) : initialUsers;
   });
 
   const [jurusan, setJurusan] = useState<Jurusan[]>(() => {
     const saved = localStorage.getItem('jurnal_db_jurusan');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialJurusan : []);
+    return saved ? JSON.parse(saved) : initialJurusan;
   });
 
   const [mapel, setMapel] = useState<Mapel[]>(() => {
     const saved = localStorage.getItem('jurnal_db_mapel');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialMapel : []);
+    return saved ? JSON.parse(saved) : initialMapel;
   });
 
   const [kelas, setKelas] = useState<Kelas[]>(() => {
     const saved = localStorage.getItem('jurnal_db_kelas');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialKelas : []);
+    return saved ? JSON.parse(saved) : initialKelas;
   });
 
   const [siswa, setSiswa] = useState<Siswa[]>(() => {
     const saved = localStorage.getItem('jurnal_db_siswa');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialSiswa : []);
+    return saved ? JSON.parse(saved) : initialSiswa;
   });
 
   const [guru, setGuru] = useState<Guru[]>(() => {
     const saved = localStorage.getItem('jurnal_db_guru');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialGuru : []);
+    return saved ? JSON.parse(saved) : initialGuru;
   });
 
   const [guruMengampu, setGuruMengampu] = useState<GuruMengampu[]>(() => {
     const saved = localStorage.getItem('jurnal_db_mengampu');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialGuruMengampu : []);
+    return saved ? JSON.parse(saved) : initialGuruMengampu;
   });
 
   const [jurnals, setJurnals] = useState<Jurnal[]>(() => {
     const saved = localStorage.getItem('jurnal_db_jurnal_entries');
-    return saved ? JSON.parse(saved) : (localStorage.getItem('jurnal_installed') === 'true' ? initialJurnal : []);
+    return saved ? JSON.parse(saved) : initialJurnal;
   });
 
   // Save changes to localStorage whenever state arrays update
@@ -136,8 +134,8 @@ export default function App() {
   // PRINT OVERLAY DIALOG PARAMETERS
   // -------------------------------------------------------------
   const [printModalParams, setPrintModalParams] = useState<{
-    type: 'harian' | 'mingguan' | 'bulanan';
-    classId: string;
+    type: 'harian' | 'mingguan' | 'bulanan' | 'monitoring';
+    classId?: string | null;
     filterDate?: string;
   } | null>(null);
 
@@ -293,13 +291,8 @@ export default function App() {
   return (
     <div id="main-view-wrapper" className="min-h-screen bg-slate-50 text-slate-800">
       
-      {/* 0. DISPATCH INSTALLATION WIZARD SCREEN */}
-      {!installed && (
-        <InstallWizard onInstallComplete={handleInstallComplete} />
-      )}
-
       {/* 1. AUTH SCREEN VIEW */}
-      {installed && !currentUser && (
+      {!currentUser && (
         <LoginScreen 
           onLoginSuccess={handleLoginSuccess}
           users={users}
@@ -308,7 +301,7 @@ export default function App() {
       )}
 
       {/* 2. AUTHENTICATED DASHBOARD PORTAL */}
-      {installed && currentUser && (
+      {currentUser && (
         <ShapeRexLayout
           user={currentUser}
           onLogout={handleLogout}
@@ -367,6 +360,9 @@ export default function App() {
               onAddJurnal={handleAddJurnal}
               onDeleteJurnal={handleDeleteJurnal}
               onResetInstall={handleResetInstall}
+              onOpenPrintModal={(type, classId, filterDate) => {
+                setPrintModalParams({ type, classId, filterDate });
+              }}
             />
           )}
         </ShapeRexLayout>
@@ -382,6 +378,7 @@ export default function App() {
           jurusan={jurusan}
           mapel={mapel}
           guru={guru}
+          siswa={siswa}
           jurnals={jurnals}
           schoolInfo={schoolInfo}
           onClose={() => setPrintModalParams(null)}

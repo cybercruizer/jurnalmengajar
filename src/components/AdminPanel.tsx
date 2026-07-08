@@ -30,6 +30,7 @@ interface AdminPanelProps {
   onAddJurnal?: (newEntry: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => void;
   onDeleteJurnal?: (id: string) => void;
   onResetInstall?: () => void;
+  onOpenPrintModal?: (type: 'harian' | 'mingguan' | 'bulanan' | 'monitoring', classId: string | null, filterDate?: string) => void;
 }
 
 export default function AdminPanel({
@@ -45,11 +46,28 @@ export default function AdminPanel({
   jurnals = [],
   onAddJurnal,
   onDeleteJurnal,
-  onResetInstall
+  onResetInstall,
+  onOpenPrintModal
 }: AdminPanelProps) {
 
   // Notification states
   const [adminNotification, setAdminNotification] = useState<string>('');
+
+  // Database environment config state
+  const [dbConfig, setDbConfig] = useState<any>(null);
+
+  React.useEffect(() => {
+    fetch('/api/env-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.config) {
+          setDbConfig(data.config);
+        }
+      })
+      .catch(err => {
+        console.error('Gagal mengambil konfigurasi database:', err);
+      });
+  }, []);
 
   // Editing structures
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -64,6 +82,7 @@ export default function AdminPanel({
   });
   const [rekapSearchKelas, setRekapSearchKelas] = useState('');
   const [selectedRekapJurnal, setSelectedRekapJurnal] = useState<any | null>(null);
+  const [monitoringStatusFilter, setMonitoringStatusFilter] = useState<'semua' | 'belum' | 'sudah'>('semua');
 
   // Form states depending on currently selected master audit module
   // 1. Users form
@@ -837,6 +856,46 @@ export default function AdminPanel({
                 <p className="text-xs text-slate-650 leading-relaxed">
                   Semua form pengeditan pada panel admin bersifat reaktif. Menambahkan guru atau siswa yang ditunjuk menjadi <strong>Ketua Kelas</strong> secara otomatis membukakan akses akun login baru dengan password default sesuai kriteria sistem demi kenyamanan evaluasi.
                 </p>
+              </div>
+            </div>
+
+            {/* Database configuration card */}
+            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-md text-left">
+              <h3 className="text-sm font-bold text-slate-800 tracking-wider mb-4 flex items-center gap-1.5 border-b border-slate-100 pb-2.5 uppercase">
+                <Layers className="w-4 h-4 text-indigo-500" />
+                Status Integrasi Database & Lingkungan (.env)
+              </h3>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                Aplikasi terhubung ke database luring / daring yang telah terkonfigurasi pada file lingkungan <code>.env</code> server secara aman tanpa wizard penginstalan di klien.
+              </p>
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-medium">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">DATABASE ENGINE</span>
+                  <strong className="text-slate-800 font-bold">{dbConfig?.dbType || 'PostgreSQL (Local / Cloud SQL)'}</strong>
+                </div>
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">HOST & PORT KONEKSI</span>
+                  <strong className="text-slate-800 font-mono">{dbConfig?.host || 'localhost'}:{dbConfig?.port || '5432'}</strong>
+                </div>
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">NAMA DATABASE</span>
+                  <strong className="text-slate-800 font-mono text-indigo-600">{dbConfig?.name || 'jurnalku_smk'}</strong>
+                </div>
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">PENGGUNA / USER</span>
+                  <strong className="text-slate-800 font-mono">{dbConfig?.user || 'postgres'}</strong>
+                </div>
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">KATA SANDI / PASSWORD</span>
+                  <strong className="text-slate-500 font-mono">•••••••• (Disembunyikan)</strong>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <div>
+                    <span className="text-emerald-800 block text-[9.5px] font-bold uppercase tracking-wider">STATUS KONEKSI</span>
+                    <strong className="text-emerald-900 font-black">🟢 AKTIF (.env Loaded)</strong>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1886,6 +1945,17 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <RefreshCw className="w-4 h-4" />
                 </button>
                 <button
+                  onClick={() => {
+                    if (onOpenPrintModal) {
+                      onOpenPrintModal('monitoring', null, rekapDate);
+                    }
+                  }}
+                  className="py-2.5 px-4 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak Pemantauan</span>
+                </button>
+                <button
                   onClick={() => handleOpenInputJurnal('')}
                   className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
                 >
@@ -1898,9 +1968,19 @@ KGR-010,Siti Zubaidah, S.Pd.
             {/* Compute daily metrics */}
             {(() => {
               const jurnalsForDate = jurnals.filter(j => j.tanggal === rekapDate);
-              const classesFiltered = kelas.filter(k => 
-                k.nama.toLowerCase().includes(rekapSearchKelas.toLowerCase())
-              );
+              const classesFiltered = kelas.filter(k => {
+                const matchesSearch = k.nama.toLowerCase().includes(rekapSearchKelas.toLowerCase());
+                if (!matchesSearch) return false;
+                
+                const hasEntries = jurnalsForDate.some(j => j.kelasId === k.id);
+                if (monitoringStatusFilter === 'belum') {
+                  return !hasEntries;
+                }
+                if (monitoringStatusFilter === 'sudah') {
+                  return hasEntries;
+                }
+                return true;
+              });
               
               // Find unique kelasIds of the journals for this date
               const kelasWithEntries = new Set(jurnalsForDate.map(j => j.kelasId));
@@ -1981,6 +2061,50 @@ KGR-010,Siti Zubaidah, S.Pd.
                       </span>
                     </div>
 
+                    {/* Status filter segment */}
+                    <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
+                      <button
+                        onClick={() => setMonitoringStatusFilter('semua')}
+                        className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          monitoringStatusFilter === 'semua'
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        Semua Kelas ({kelas.filter(k => k.nama.toLowerCase().includes(rekapSearchKelas.toLowerCase())).length})
+                      </button>
+                      <button
+                        onClick={() => setMonitoringStatusFilter('belum')}
+                        className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          monitoringStatusFilter === 'belum'
+                            ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/10'
+                            : 'text-rose-500 hover:text-rose-600'
+                        }`}
+                      >
+                        🔴 Belum Mengisi ({
+                          kelas.filter(k => 
+                            k.nama.toLowerCase().includes(rekapSearchKelas.toLowerCase()) && 
+                            !jurnalsForDate.some(j => j.kelasId === k.id)
+                          ).length
+                        })
+                      </button>
+                      <button
+                        onClick={() => setMonitoringStatusFilter('sudah')}
+                        className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          monitoringStatusFilter === 'sudah'
+                            ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/10'
+                            : 'text-emerald-500 hover:text-emerald-600'
+                        }`}
+                      >
+                        🟢 Sudah Mengisi ({
+                          kelas.filter(k => 
+                            k.nama.toLowerCase().includes(rekapSearchKelas.toLowerCase()) && 
+                            jurnalsForDate.some(j => j.kelasId === k.id)
+                          ).length
+                        })
+                      </button>
+                    </div>
+
                     {classesFiltered.length === 0 ? (
                       <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center shadow-xs">
                         <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
@@ -2027,11 +2151,31 @@ KGR-010,Siti Zubaidah, S.Pd.
                                 {/* Standard periods line map */}
                                 <div className="space-y-2.5">
                                   {classInDateEntries.length === 0 ? (
-                                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between text-left select-none">
+                                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between text-left gap-3">
                                       <div>
-                                        <p className="text-xs font-semibold text-slate-400 mt-0.5">Laporan KBM belum dimasukkan</p>
+                                        <p className="text-xs font-bold text-rose-800">Laporan Jurnal Belum Diisi</p>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">Ketua Kelas bertanggung jawab menginput hari ini.</p>
                                       </div>
-                                      <span className="text-[9px] font-extrabold text-slate-400 bg-slate-105 border border-slate-200 px-2 py-0.5 rounded-lg">Kosong</span>
+                                      {(() => {
+                                        const ketua = siswa.find(s => s.kelasId === k.id && s.isKetuaKelas);
+                                        if (ketua) {
+                                          const waText = encodeURIComponent(`Halo Ketua Kelas ${ketua.nama} dari kelas ${k.nama}, mohon segera mengisi jurnal pembelajaran KBM untuk hari ini (${new Date(rekapDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}). Terima kasih!`);
+                                          return (
+                                            <a
+                                              href={`https://wa.me/?text=${waText}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-lg transition-all flex items-center gap-1.5 text-center cursor-pointer w-fit"
+                                            >
+                                              <Phone className="w-3 h-3" />
+                                              <span>Hubungi Ketua: {ketua.nama}</span>
+                                            </a>
+                                          );
+                                        }
+                                        return (
+                                          <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">Kosong</span>
+                                        );
+                                      })()}
                                     </div>
                                   ) : (
                                     [...classInDateEntries]
@@ -2585,33 +2729,6 @@ KGR-010,Siti Zubaidah, S.Pd.
                 Simpan Identitas Kop Sekolah
               </button>
             </form>
-
-            {onResetInstall && (
-              <div className="mt-12 pt-8 border-t border-slate-100 max-w-2xl text-left">
-                <div className="p-6 bg-rose-50 border border-rose-100 rounded-3xl flex flex-col sm:flex-row gap-4 items-start justify-between">
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-rose-800 uppercase tracking-widest flex items-center gap-1.5 font-mono">
-                      <ShieldAlert className="w-4 h-4 text-rose-600 animate-pulse" />
-                      Zona Bahaya: Re-instalasi JurnalKu
-                    </h4>
-                    <p className="text-xs text-rose-700 leading-relaxed font-semibold">
-                      Ingin menguji fitur penginstal/Setup Wizard dari awal? Klik tombol atur ulang untuk membersihkan database luring, membatalkan status terinstal, dan memuat kembali instrumen pemasangan sistem pertama kali.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('PERINGATAN: Atur ulang sistem akan menghapus semua tabel, data kelas, jurnal, dan status pendaftaran. Lanjutkan untuk memulai ulang instalasi awal?')) {
-                        onResetInstall();
-                      }
-                    }}
-                    className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10.5px] rounded-xl shadow-md transition-colors cursor-pointer shrink-0"
-                  >
-                    Mulai Ulang Instalasi
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
