@@ -100,6 +100,72 @@ async function startServer() {
     }
   });
 
+  // API Route to fetch all data from DB
+  app.get("/api/data", async (req, res) => {
+    try {
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+
+      const [
+        usersData, sekolahData, jurusanData, mapelData, 
+        kelasData, siswaData, guruData, guruMengampuData, jurnalData
+      ] = await Promise.all([
+        db.select().from(schema.users),
+        db.select().from(schema.sekolah),
+        db.select().from(schema.jurusan),
+        db.select().from(schema.mapel),
+        db.select().from(schema.kelas),
+        db.select().from(schema.siswa),
+        db.select().from(schema.guru),
+        db.select().from(schema.guruMengampu),
+        db.select().from(schema.jurnal)
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          users: usersData,
+          sekolah: sekolahData[0] || null,
+          jurusan: jurusanData,
+          mapel: mapelData,
+          kelas: kelasData,
+          siswa: siswaData,
+          guru: guruData,
+          guruMengampu: guruMengampuData,
+          jurnal: jurnalData
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // API Route for Login
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { eq, and } = await import("drizzle-orm");
+
+      const user = await db.select().from(schema.users).where(
+        and(eq(schema.users.username, username), eq(schema.users.password, password))
+      ).limit(1);
+
+      if (user.length > 0) {
+        res.json({ success: true, user: user[0] });
+      } else {
+        res.status(401).json({ success: false, message: "Username atau password salah" });
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

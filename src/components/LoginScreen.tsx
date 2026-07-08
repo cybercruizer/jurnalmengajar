@@ -14,7 +14,9 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
   const [errorString, setErrorString] = useState('');
   const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('siswa');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorString('');
 
@@ -23,33 +25,50 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
       return;
     }
 
-    const foundUser = users.find(
-      (u) => u.username.toLowerCase() === username.trim().toLowerCase() && password === 'admin123' || password === 'guru123' || password === 'siswa123'
-    );
+    setLoading(true);
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password })
+      });
+      const result = await response.json();
 
-    // Strict credential check against pre-seeded users
-    const matchedUser = users.find(
-      (u) => u.username.toLowerCase() === username.trim().toLowerCase()
-    );
-
-    if (matchedUser) {
-      // In a prototype demo we can allow direct matches from the seed as long as password matches their default passwords
-      const isValidPassword = 
-        password === matchedUser.password ||
-        (matchedUser.role === 'admin' && (password === 'admin123' || password === 'admin12345')) ||
-        (matchedUser.role === 'guru' && password === 'guru123') ||
-        (matchedUser.role === 'siswa' && password === 'siswa123');
-
-      // Let's also accept general pass tests for newly created users
-      const fallbackPass = password === 'pass123' || password === '123456';
-
-      if (isValidPassword || fallbackPass) {
+      if (result.success && result.user) {
+        onLoginSuccess(result.user);
+      } else {
+        // Fallback to local array check if API fails or no match (for robustness in preview)
+        const matchedUser = users.find(
+          (u) => u.username.toLowerCase() === username.trim().toLowerCase()
+        );
+        if (matchedUser) {
+          const isValidPassword = 
+            password === matchedUser.password ||
+            (matchedUser.role === 'admin' && (password === 'admin123' || password === 'admin12345')) ||
+            (matchedUser.role === 'guru' && password === 'guru123') ||
+            (matchedUser.role === 'siswa' && password === 'siswa123');
+          
+          if (isValidPassword) {
+            onLoginSuccess(matchedUser);
+            setLoading(false);
+            return;
+          }
+        }
+        setErrorString(result.message || 'Username atau password tidak sesuai!');
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      // Fallback
+      const matchedUser = users.find(
+        (u) => u.username.toLowerCase() === username.trim().toLowerCase()
+      );
+      if (matchedUser && matchedUser.password === password) {
         onLoginSuccess(matchedUser);
-        return;
+      } else {
+        setErrorString('Gagal menghubungi server database.');
       }
     }
-
-    setErrorString('Username atau password tidak sesuai dengan role tersebut!');
+    setLoading(false);
   };
 
   const handleQuickLogin = (role: UserRole) => {
@@ -225,10 +244,11 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
               <button
                 type="submit"
                 id="btn-login-submit"
-                className="w-full mt-6 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                disabled={loading}
+                className="w-full mt-6 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
-                <span>Masuk Sekarang</span>
+                <span>{loading ? 'Memproses...' : 'Masuk Sekarang'}</span>
               </button>
             </form>
 

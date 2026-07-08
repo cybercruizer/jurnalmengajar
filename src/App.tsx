@@ -21,56 +21,46 @@ export default function App() {
   // DATABASE STORAGE SYNCS (localStorage with initialSeed fallbacks)
   // -------------------------------------------------------------
   const [installed, setInstalled] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('jurnal_active_user');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [schoolInfo, setSchoolInfo] = useState<Sekolah>(() => {
-    const saved = localStorage.getItem('jurnal_school_info');
-    return saved ? JSON.parse(saved) : initialSekolah;
-  });
+  const [schoolInfo, setSchoolInfo] = useState<Sekolah>(initialSekolah);
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [jurusan, setJurusan] = useState<Jurusan[]>(initialJurusan);
+  const [mapel, setMapel] = useState<Mapel[]>(initialMapel);
+  const [kelas, setKelas] = useState<Kelas[]>(initialKelas);
+  const [siswa, setSiswa] = useState<Siswa[]>(initialSiswa);
+  const [guru, setGuru] = useState<Guru[]>(initialGuru);
+  const [guruMengampu, setGuruMengampu] = useState<GuruMengampu[]>(initialGuruMengampu);
+  const [jurnals, setJurnals] = useState<Jurnal[]>(initialJurnal);
 
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_users');
-    return saved ? JSON.parse(saved) : initialUsers;
-  });
-
-  const [jurusan, setJurusan] = useState<Jurusan[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_jurusan');
-    return saved ? JSON.parse(saved) : initialJurusan;
-  });
-
-  const [mapel, setMapel] = useState<Mapel[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_mapel');
-    return saved ? JSON.parse(saved) : initialMapel;
-  });
-
-  const [kelas, setKelas] = useState<Kelas[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_kelas');
-    return saved ? JSON.parse(saved) : initialKelas;
-  });
-
-  const [siswa, setSiswa] = useState<Siswa[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_siswa');
-    return saved ? JSON.parse(saved) : initialSiswa;
-  });
-
-  const [guru, setGuru] = useState<Guru[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_guru');
-    return saved ? JSON.parse(saved) : initialGuru;
-  });
-
-  const [guruMengampu, setGuruMengampu] = useState<GuruMengampu[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_mengampu');
-    return saved ? JSON.parse(saved) : initialGuruMengampu;
-  });
-
-  const [jurnals, setJurnals] = useState<Jurnal[]>(() => {
-    const saved = localStorage.getItem('jurnal_db_jurnal_entries');
-    return saved ? JSON.parse(saved) : initialJurnal;
-  });
+  useEffect(() => {
+    fetch('/api/data')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          const dbData = result.data;
+          if (dbData.sekolah) setSchoolInfo(dbData.sekolah);
+          if (dbData.users?.length) setUsers(dbData.users);
+          if (dbData.jurusan?.length) setJurusan(dbData.jurusan);
+          if (dbData.mapel?.length) setMapel(dbData.mapel);
+          if (dbData.kelas?.length) setKelas(dbData.kelas);
+          if (dbData.siswa?.length) setSiswa(dbData.siswa);
+          if (dbData.guru?.length) setGuru(dbData.guru);
+          if (dbData.guruMengampu?.length) setGuruMengampu(dbData.guruMengampu);
+          if (dbData.jurnal?.length) setJurnals(dbData.jurnal);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching from DB:', err);
+        setLoading(false); // fallback to initialData
+      });
+  }, []);
 
   // Save changes to localStorage whenever state arrays update
   useEffect(() => {
@@ -179,6 +169,15 @@ export default function App() {
   const loggedGuru = currentUser && currentUser.role === 'guru'
     ? guru.find(g => g.id === currentUser.referenceId)
     : null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+        <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-slate-500 font-medium tracking-wide">Memuat Data Database...</p>
+      </div>
+    );
+  }
 
   return (
     <div id="main-view-wrapper" className="min-h-screen bg-slate-50 text-slate-800">
