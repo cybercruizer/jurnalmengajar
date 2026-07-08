@@ -29,7 +29,6 @@ interface AdminPanelProps {
   jurnals?: Jurnal[];
   onAddJurnal?: (newEntry: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => void;
   onDeleteJurnal?: (id: string) => void;
-  onResetInstall?: () => void;
   onOpenPrintModal?: (type: 'harian' | 'mingguan' | 'bulanan' | 'monitoring', classId: string | null, filterDate?: string) => void;
 }
 
@@ -46,7 +45,6 @@ export default function AdminPanel({
   jurnals = [],
   onAddJurnal,
   onDeleteJurnal,
-  onResetInstall,
   onOpenPrintModal
 }: AdminPanelProps) {
 
@@ -871,11 +869,11 @@ export default function AdminPanel({
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-medium">
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <span className="text-slate-400 block mb-0.5 text-[9.5px]">DATABASE ENGINE</span>
-                  <strong className="text-slate-800 font-bold">{dbConfig?.dbType || 'PostgreSQL (Local / Cloud SQL)'}</strong>
+                  <strong className="text-slate-800 font-bold">{dbConfig?.dbType || 'MySQL'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <span className="text-slate-400 block mb-0.5 text-[9.5px]">HOST & PORT KONEKSI</span>
-                  <strong className="text-slate-800 font-mono">{dbConfig?.host || 'localhost'}:{dbConfig?.port || '5432'}</strong>
+                  <strong className="text-slate-800 font-mono">{dbConfig?.host || 'localhost'}:{dbConfig?.port || '3306'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <span className="text-slate-400 block mb-0.5 text-[9.5px]">NAMA DATABASE</span>
@@ -883,7 +881,7 @@ export default function AdminPanel({
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <span className="text-slate-400 block mb-0.5 text-[9.5px]">PENGGUNA / USER</span>
-                  <strong className="text-slate-800 font-mono">{dbConfig?.user || 'postgres'}</strong>
+                  <strong className="text-slate-800 font-mono">{dbConfig?.user || 'root'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                   <span className="text-slate-400 block mb-0.5 text-[9.5px]">KATA SANDI / PASSWORD</span>

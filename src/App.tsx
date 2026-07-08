@@ -14,7 +14,6 @@ import AdminPanel from './components/AdminPanel';
 import GuruPanel from './components/GuruPanel';
 import SiswaPanel from './components/SiswaPanel';
 import CetakLaporanModal from './components/CetakLaporanModal';
-import InstallWizard from './components/InstallWizard';
 
 export default function App() {
   
@@ -140,113 +139,6 @@ export default function App() {
   } | null>(null);
 
   // -------------------------------------------------------------
-  // INSTALLATION MANAGEMENT ENTRIES
-  // -------------------------------------------------------------
-  const handleInstallComplete = (config: {
-    dbType: string;
-    dbConfig: any;
-    schoolName: string;
-    schoolNpsn: string;
-    schoolAlamat: string;
-    seedDemo: boolean;
-  }) => {
-    // 1. Update school info
-    const fullSchool: Sekolah = {
-      nama: config.schoolName,
-      npsn: config.schoolNpsn,
-      alamat: config.schoolAlamat,
-      kepalaSekolah: 'Drs. H. Sukardiyono, M.Pd.',
-      nipKepalaSekolah: '196711041994031005',
-      website: 'www.smkmuhmungkid.sch.id',
-      email: 'info@smkmuhmungkid.sch.id'
-    };
-    setSchoolInfo(fullSchool);
-    localStorage.setItem('jurnal_school_info', JSON.stringify(fullSchool));
-
-    // 2. Clear any prior active session
-    localStorage.removeItem('jurnal_active_user');
-    setCurrentUser(null);
-
-    // 3. Build users and database state depending on seeding selection
-    if (config.seedDemo) {
-      // Seed with sample data but update the default administrator password to what was requested: admin12345
-      const seededUsers = initialUsers.map(u => 
-        u.username === 'admin' 
-          ? { ...u, password: 'admin12345' } 
-          : u
-      );
-      setUsers(seededUsers);
-      setJurusan(initialJurusan);
-      setMapel(initialMapel);
-      setKelas(initialKelas);
-      setSiswa(initialSiswa);
-      setGuru(initialGuru);
-      setGuruMengampu(initialGuruMengampu);
-      setJurnals(initialJurnal);
-
-      localStorage.setItem('jurnal_db_users', JSON.stringify(seededUsers));
-      localStorage.setItem('jurnal_db_jurusan', JSON.stringify(initialJurusan));
-      localStorage.setItem('jurnal_db_mapel', JSON.stringify(initialMapel));
-      localStorage.setItem('jurnal_db_kelas', JSON.stringify(initialKelas));
-      localStorage.setItem('jurnal_db_siswa', JSON.stringify(initialSiswa));
-      localStorage.setItem('jurnal_db_guru', JSON.stringify(initialGuru));
-      localStorage.setItem('jurnal_db_mengampu', JSON.stringify(initialGuruMengampu));
-      localStorage.setItem('jurnal_db_jurnal_entries', JSON.stringify(initialJurnal));
-    } else {
-      // Clear data, create standard administrator user only (username: admin, password: admin12345)
-      const cleanUsers: User[] = [
-        {
-          id: 'user-admin',
-          username: 'admin',
-          password: 'admin12345',
-          role: 'admin',
-          name: 'Administrator Utama (Tata Usaha/Kurikulum)'
-        }
-      ];
-      setUsers(cleanUsers);
-      setJurusan([]);
-      setMapel([]);
-      setKelas([]);
-      setSiswa([]);
-      setGuru([]);
-      setGuruMengampu([]);
-      setJurnals([]);
-
-      localStorage.setItem('jurnal_db_users', JSON.stringify(cleanUsers));
-      localStorage.setItem('jurnal_db_jurusan', JSON.stringify([]));
-      localStorage.setItem('jurnal_db_mapel', JSON.stringify([]));
-      localStorage.setItem('jurnal_db_kelas', JSON.stringify([]));
-      localStorage.setItem('jurnal_db_siswa', JSON.stringify([]));
-      localStorage.setItem('jurnal_db_guru', JSON.stringify([]));
-      localStorage.setItem('jurnal_db_mengampu', JSON.stringify([]));
-      localStorage.setItem('jurnal_db_jurnal_entries', JSON.stringify([]));
-    }
-
-    // 4. Record install metadata
-    localStorage.setItem('jurnal_db_type', config.dbType);
-    localStorage.setItem('jurnal_db_config', JSON.stringify(config.dbConfig));
-    localStorage.setItem('jurnal_installed', 'true');
-    
-    // Set state
-    setInstalled(true);
-  };
-
-  const handleResetInstall = () => {
-    localStorage.clear();
-    setInstalled(false);
-    setCurrentUser(null);
-    setSchoolInfo({ nama: '', npsn: '', alamat: '', kepalaSekolah: '', nipKepalaSekolah: '', website: '', email: '' });
-    setUsers([]);
-    setJurusan([]);
-    setMapel([]);
-    setKelas([]);
-    setSiswa([]);
-    setGuru([]);
-    setGuruMengampu([]);
-    setJurnals([]);
-  };
-
-  // -------------------------------------------------------------
   // CORE AUTH LOGIC ENTRIES
   // -------------------------------------------------------------
   const handleLoginSuccess = (user: User) => {
@@ -359,7 +251,6 @@ export default function App() {
               jurnals={jurnals}
               onAddJurnal={handleAddJurnal}
               onDeleteJurnal={handleDeleteJurnal}
-              onResetInstall={handleResetInstall}
               onOpenPrintModal={(type, classId, filterDate) => {
                 setPrintModalParams({ type, classId, filterDate });
               }}

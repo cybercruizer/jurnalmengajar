@@ -35,10 +35,10 @@ async function startServer() {
         }
       };
 
-      envContent = setEnvVar(envContent, "DB_TYPE", dbType || "local_storage");
+      envContent = setEnvVar(envContent, "DB_TYPE", dbType || "mysql");
       envContent = setEnvVar(envContent, "DB_HOST", host || "localhost");
-      envContent = setEnvVar(envContent, "DB_PORT", port || "5432");
-      envContent = setEnvVar(envContent, "DB_USER", user || "postgres");
+      envContent = setEnvVar(envContent, "DB_PORT", port || "3306");
+      envContent = setEnvVar(envContent, "DB_USER", user || "root");
       envContent = setEnvVar(envContent, "DB_PASSWORD", password || "");
       envContent = setEnvVar(envContent, "DB_NAME", name || "jurnalku_smk");
 
@@ -63,10 +63,10 @@ async function startServer() {
   app.get("/api/env-config", (req, res) => {
     try {
       let config = {
-        dbType: process.env.DB_TYPE || "local_storage",
+        dbType: process.env.DB_TYPE || "mysql",
         host: process.env.DB_HOST || "localhost",
-        port: process.env.DB_PORT || "5432",
-        user: process.env.DB_USER || "postgres",
+        port: process.env.DB_PORT || "3306",
+        user: process.env.DB_USER || "root",
         password: process.env.DB_PASSWORD || "",
         name: process.env.DB_NAME || "jurnalku_smk",
       };

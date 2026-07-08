@@ -17,7 +17,7 @@ Aplikasi manajemen jurnal mengajar harian, presensi siswa, dan rekapitulasi data
 Sebelum memulai instalasi di lingkungan produksi (Live Production), pastikan server Anda memiliki komponen berikut:
 * **Node.js** v18.0 atau versi yang lebih baru.
 * **NPM** atau **Yarn** sebagai package manager.
-* **Database (Opsional)**: PostgreSQL atau MySQL (Aplikasi juga mendukung fallback menggunakan *Browser Local Storage* jika tidak ingin menggunakan database server fisik).
+* **Database (Opsional)**: MySQL (Aplikasi juga mendukung fallback menggunakan *Browser Local Storage* jika tidak ingin menggunakan database server fisik).
 
 ---
 
@@ -43,19 +43,19 @@ Buka file `.env` tersebut dan sesuaikan konfigurasi dasar Anda:
 # URL Utama Aplikasi (Diperlukan untuk callback & asset routing)
 APP_URL="https://jurnal.sekolahanda.sch.id"
 
-# Konfigurasi Database (Tipe database: postgresql / mysql / local_storage)
-DB_TYPE="local_storage"
+# Konfigurasi Database (Tipe database: mysql / local_storage)
+DB_TYPE="mysql"
 DB_HOST="localhost"
-DB_PORT="5432"
-DB_USER="postgres"
+DB_PORT="3306"
+DB_USER="root"
 DB_PASSWORD="your-strong-password"
 DB_NAME="jurnalku_smk"
 ```
 > **Catatan Penting**: 
-> Konfigurasi database sekarang dilakukan murni melalui file `.env`. Fitur Wizard Instalasi telah dihilangkan untuk menjaga keamanan lingkungan produksi. Pastikan Anda telah mengisi kredensial database PostgreSQL dengan benar sebelum menjalankan aplikasi.
+> Konfigurasi database sekarang dilakukan murni melalui file `.env`. Fitur Wizard Instalasi telah dihilangkan untuk menjaga keamanan lingkungan produksi. Pastikan Anda telah mengisi kredensial database MySQL dengan benar sebelum menjalankan aplikasi.
 
 ### 3. Migrasi Struktur Database (Production-Ready)
-Aplikasi ini menggunakan `drizzle-orm` untuk manajemen skema database. Setelah mengkonfigurasi file `.env` dengan kredensial PostgreSQL yang valid, jalankan perintah migrasi untuk membangun tabel-tabel di database Anda:
+Aplikasi ini menggunakan `drizzle-orm` untuk manajemen skema database. Setelah mengkonfigurasi file `.env` dengan kredensial MySQL yang valid, jalankan perintah migrasi untuk membangun tabel-tabel di database Anda:
 
 ```bash
 npm run db:push
