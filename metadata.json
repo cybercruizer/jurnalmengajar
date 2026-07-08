@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Jurnal Mengajar",
+  "description": "Aplikasi Jurnal Mengajar Sekolah dengan fitur multi-login untuk Admin, Guru, dan Siswa (Ketua Kelas). Dilengkapi dengan manajemen data master sekolah, rekap jurnal, dan cetak laporan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,11 +1,144 @@
-<div align="center">
+# JurnalKu SMK 🏫
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Aplikasi manajemen jurnal mengajar harian, presensi siswa, dan rekapitulasi data kelas untuk SMK/Sekolah Swasta. JurnalKu didesain modern, responsif, dan mudah digunakan baik oleh Siswa (Ketua Kelas), Guru (Tenaga Pendidik), maupun Admin Sekolah.
 
-  <h1>Built with AI Studio</h2>
+---
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 🛠️ Fitur Utama
+- **Sistem Autentikasi Multi-Role**: Dukungan login terpisah untuk Siswa (Ketua Kelas), Guru Pengampu, dan Administrator Sekolah.
+- **Wizard Instalasi Interaktif**: Setup instansi sekolah baru, nama kepala sekolah, NIP/Kode kepala sekolah, dan konfigurasi database secara visual saat pertama kali dipasang.
+- **Dukungan Kode Guru**: Fleksibel untuk sekolah swasta yang tidak menggunakan NIP (Nomor Induk Pegawai), melainkan Kode Guru unik.
+- **Import Data Massal via CSV**: Memudahkan pendaftaran massal siswa, guru pengampu, serta mata pelajaran lengkap dengan petunjuk format kolom yang presisi.
+- **Cetak Laporan Siap Pakai**: Ekspor laporan harian, mingguan, maupun bulanan ke dalam format cetak fisik/PDF resmi lengkap dengan tanda tangan Kepala Sekolah.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+---
 
-</div>
+## 📋 Kebutuhan Sistem
+Sebelum memulai instalasi di lingkungan produksi (Live Production), pastikan server Anda memiliki komponen berikut:
+* **Node.js** v18.0 atau versi yang lebih baru.
+* **NPM** atau **Yarn** sebagai package manager.
+* **Database (Opsional)**: PostgreSQL atau MySQL (Aplikasi juga mendukung fallback menggunakan *Browser Local Storage* jika tidak ingin menggunakan database server fisik).
+
+---
+
+## 🚀 Petunjuk Instalasi Live Production
+
+Ikuti langkah-langkah di bawah ini untuk memasang JurnalKu SMK pada server VPS, Cloud Run, atau hosting Node.js pilihan Anda:
+
+### 1. Persiapan Kode Sumber
+Unggah file kode sumber ke server Anda atau clone menggunakan Git:
+```bash
+git clone <repository-url>
+cd jurnalku-smk
+```
+
+### 2. Konfigurasi Environment Variables (`.env`)
+Salin file `.env.example` menjadi `.env` untuk konfigurasi produksi:
+```bash
+cp .env.example .env
+```
+
+Buka file `.env` tersebut dan sesuaikan konfigurasi dasar Anda:
+```env
+# URL Utama Aplikasi (Diperlukan untuk callback & asset routing)
+APP_URL="https://jurnal.sekolahanda.sch.id"
+
+# Konfigurasi Database (Tipe database: postgresql / mysql / local_storage)
+DB_TYPE="local_storage"
+DB_HOST="localhost"
+DB_PORT="5432"
+DB_USER="postgres"
+DB_PASSWORD="your-strong-password"
+DB_NAME="jurnalku_smk"
+```
+> **Catatan Penting**: 
+> Saat pertama kali Anda membuka aplikasi di browser, sistem akan menyajikan **Wizard Instalasi**. Konfigurasi database yang Anda isi di Wizard tersebut akan **otomatis disimpan ke dalam file `.env`** ini oleh backend server Node.js sehingga Anda tidak perlu mengedit file secara manual di server terminal.
+
+### 3. Pemasangan Dependensi
+Pasang semua paket pustaka yang dibutuhkan oleh sistem:
+```bash
+npm install
+```
+
+### 4. Build untuk Production
+Kompilasi komponen frontend dan bundel server backend ke dalam folder distribusi (`dist/`) menggunakan perintah build produksi:
+```bash
+npm run build
+```
+Perintah di atas akan melakukan compile aset client-side sekaligus membundel file server backend (`server.ts`) menjadi format CommonJS mandiri di `dist/server.cjs` menggunakan esbuild.
+
+### 5. Jalankan Aplikasi
+Jalankan aplikasi di mode production:
+```bash
+npm start
+```
+Aplikasi secara default akan berjalan di port **3000** dan mengikat ke host `0.0.0.0` sehingga aman diakses dari reverse proxy luar (seperti Nginx atau Cloudflare).
+
+---
+
+## 🔒 Konfigurasi Keamanan Tambahan (Nginx Reverse Proxy)
+Disarankan untuk membungkus aplikasi dengan Nginx sebagai reverse proxy dan mengaktifkan SSL (HTTPS). Contoh konfigurasi block Nginx:
+
+```nginx
+server {
+    listen 80;
+    server_name jurnal.sekolahanda.sch.id;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name jurnal.sekolahanda.sch.id;
+
+    ssl_certificate /etc/letsencrypt/live/jurnal.sekolahanda.sch.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/jurnal.sekolahanda.sch.id/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+---
+
+## 📂 Format Import File CSV Massal
+
+Saat masuk ke Panel Admin, Anda dapat mengunggah file CSV secara massal untuk mempercepat pengisian data awal sekolah:
+
+### A. Mata Pelajaran (Mapel)
+- **Nama Header Kolom**: `kode,nama`
+- **Contoh baris**:
+  ```csv
+  kode,nama
+  RPL-A1,Pemrograman Web Dasar
+  COMMON-4,Bahasa Inggris Bisnis
+  ```
+
+### B. Tenaga Guru Pengampu
+- **Nama Header Kolom**: `kode,nama`
+- **Contoh baris**:
+  ```csv
+  kode,nama
+  KGR-009,Drs. H. Ahmad Dahlan, M.Ag.
+  KGR-010,Siti Zubaidah, S.Pd.
+  ```
+  *(Sistem akan otomatis membuat akun login guru dengan username unik & password default `guru123`)*
+
+### C. Siswa & Kelas
+- **Nama Header Kolom**: `nis,nama,kelas,is_ketua`
+- **Contoh baris**:
+  ```csv
+  nis,nama,kelas,is_ketua
+  12499,Rizky Pratama,XI RPL 1,false
+  12501,M. Syahputra,XI RPL 1,true
+  ```
+  *(Jika `is_ketua` diset `true`, sistem otomatis membukakan akun login ketua kelas dengan password default `siswa123` untuk otorisasi pengisian jurnal)*
+
+---
+
+*Hak Cipta © SMK / Sekolah Swasta Partner - Dikembangkan untuk efisiensi administrasi sekolah.*
