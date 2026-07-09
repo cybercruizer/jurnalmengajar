@@ -579,7 +579,7 @@ export default function AdminPanel({
     }
 
     const headers = rows[0].map(h => h.toLowerCase().trim());
-    const kodeIdx = headers.findIndex(h => h === 'kode' || h === 'kode_guru' || h === 'kodeguru' || h === 'nip');
+    const kodeIdx = headers.findIndex(h => h === 'kode' || h === 'kode_guru' || h === 'kodeguru' || h === 'nip' || h === 'nbm' || h === 'nbm_guru');
     const namaIdx = headers.indexOf('nama');
 
     if (kodeIdx === -1 || namaIdx === -1) {
@@ -750,6 +750,82 @@ export default function AdminPanel({
     showBannerNotice(`Berhasil impor CSV: ${addedCount} siswa baru, ${updatedCount} diperbarui, ${akunCreatedCount} akun login siswa baru.`);
   };
 
+  const handleImportUsersCSV = (text: string) => {
+    const rows = parseCSVRows(text);
+    if (rows.length < 2) {
+      alert('File CSV kosong atau tidak memiliki data.');
+      return;
+    }
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const usernameIdx = headers.indexOf('username');
+    const nameIdx = headers.findIndex(h => h === 'name' || h === 'nama');
+    const roleIdx = headers.indexOf('role');
+    const passwordIdx = headers.findIndex(h => h === 'password' || h === 'pass');
+    const refIdx = headers.findIndex(h => h === 'referenceid' || h === 'reference_id' || h === 'ref_id');
+
+    if (usernameIdx === -1 || nameIdx === -1 || roleIdx === -1) {
+      alert('Format CSV User Akun salah. Pastikan baris pertama memiliki tajuk "username", "name" atau "nama", dan "role".');
+      return;
+    }
+
+    const currentUsers = [...users];
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.length <= Math.max(usernameIdx, nameIdx, roleIdx)) continue;
+
+      const username = row[usernameIdx].trim().toLowerCase();
+      const name = row[nameIdx].trim();
+      const roleRaw = row[roleIdx].trim().toLowerCase();
+      const password = passwordIdx !== -1 && row[passwordIdx] ? row[passwordIdx].trim() : '';
+      const referenceId = refIdx !== -1 && row[refIdx] ? row[refIdx].trim() : '';
+
+      if (!username || !name || !roleRaw) continue;
+
+      // Validate role
+      let role: UserRole = 'guru';
+      if (roleRaw === 'admin' || roleRaw === 'administrator') {
+        role = 'admin';
+      } else if (roleRaw === 'siswa' || roleRaw === 'murid' || roleRaw === 'ketua_kelas') {
+        role = 'siswa';
+      } else {
+        role = 'guru';
+      }
+
+      const defaultPass = password || (role === 'admin' ? 'admin123' : role === 'guru' ? 'guru123' : 'siswa123');
+
+      const existingIdx = currentUsers.findIndex(u => u.username.toLowerCase() === username);
+      if (existingIdx !== -1) {
+        currentUsers[existingIdx] = {
+          ...currentUsers[existingIdx],
+          name,
+          role,
+          password: password || currentUsers[existingIdx].password,
+          referenceId: referenceId || currentUsers[existingIdx].referenceId
+        };
+        updatedCount++;
+      } else {
+        const newId = 'usr-csv-' + (Date.now() + i);
+        const newUser: User = {
+          id: newId,
+          username,
+          name,
+          role,
+          password: defaultPass,
+          referenceId: referenceId || undefined
+        };
+        currentUsers.push(newUser);
+        addedCount++;
+      }
+    }
+
+    onUpdateUsers(currentUsers);
+    showBannerNotice(`Berhasil impor CSV Akun: ${addedCount} akun baru ditambahkan, ${updatedCount} akun diperbarui.`);
+  };
+
   // Initial trigger setup
   const handleEditTrigger = (item: any, type: string) => {
     setEditingId(item.id);
@@ -812,24 +888,24 @@ export default function AdminPanel({
             {/* Counts grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white p-5 border border-slate-205 rounded-2xl shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 tracking-wider block uppercase">Akun Terdaftar</span>
+                <span className="text-xs font-bold text-slate-400 tracking-wider block uppercase">Akun Terdaftar</span>
                 <p className="text-3xl font-black text-slate-800 mt-2">{users.length}</p>
-                <span className="text-[10px] text-slate-405 font-mono">User login sistem</span>
+                <span className="text-xs text-slate-405 font-mono">User login sistem</span>
               </div>
               <div className="bg-white p-5 border border-slate-205 rounded-2xl shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 tracking-wider block uppercase">Mata Pelajaran</span>
+                <span className="text-xs font-bold text-slate-400 tracking-wider block uppercase">Mata Pelajaran</span>
                 <p className="text-3xl font-black text-slate-800 mt-2">{mapel.length}</p>
-                <span className="text-[10px] text-slate-405 font-mono">Kurikulum Merdeka</span>
+                <span className="text-xs text-slate-405 font-mono">Kurikulum Merdeka</span>
               </div>
               <div className="bg-white p-5 border border-slate-205 rounded-2xl shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 tracking-wider block uppercase">Jumlah Siswa</span>
+                <span className="text-xs font-bold text-slate-400 tracking-wider block uppercase">Jumlah Siswa</span>
                 <p className="text-3xl font-black text-slate-800 mt-2">{siswa.length}</p>
-                <span className="text-[10px] text-slate-405 font-mono">Ketua kelas: {siswa.filter(s=>s.isKetuaKelas).length} orang</span>
+                <span className="text-xs text-slate-405 font-mono">Ketua kelas: {siswa.filter(s=>s.isKetuaKelas).length} orang</span>
               </div>
               <div className="bg-white p-5 border border-slate-205 rounded-2xl shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 tracking-wider block uppercase">Tenaga Guru</span>
+                <span className="text-xs font-bold text-slate-400 tracking-wider block uppercase">Tenaga Guru</span>
                 <p className="text-3xl font-black text-slate-800 mt-2">{guru.length}</p>
-                <span className="text-[10px] text-slate-405 font-mono">Guru mengampu: {guruMengampu.length} mapel</span>
+                <span className="text-xs text-slate-405 font-mono">Guru mengampu: {guruMengampu.length} mapel</span>
               </div>
             </div>
 
@@ -845,11 +921,13 @@ export default function AdminPanel({
                   <p><span className="text-slate-400 font-medium">NPSN :</span> <strong className="text-slate-700">{schoolInfo.npsn}</strong></p>
                   <p><span className="text-slate-400 font-medium">Alamat Lengkap :</span> <strong className="text-slate-700">{schoolInfo.alamat}</strong></p>
                   <p><span className="text-slate-400 font-medium">Kepala Sekolah :</span> <strong className="text-slate-700">{schoolInfo.kepalaSekolah}</strong></p>
-                  <p><span className="text-slate-400 font-medium">NIP/Kode Kepala Sekolah :</span> <strong className="text-slate-705 font-mono">{schoolInfo.nipKepalaSekolah}</strong></p>
+                  <p><span className="text-slate-400 font-medium">NBM Kepala Sekolah :</span> <strong className="text-slate-705 font-mono">{schoolInfo.nbmKepalaSekolah}</strong></p>
+                  <p><span className="text-slate-400 font-medium">Waka Kurikulum :</span> <strong className="text-slate-700">{schoolInfo.wakaKurikulum}</strong></p>
+                  <p><span className="text-slate-400 font-medium">NBM Waka Kurikulum :</span> <strong className="text-slate-705 font-mono">{schoolInfo.nbmWakaKurikulum}</strong></p>
                 </div>
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
-                <span className="px-2 py-0.5 bg-orange-100 text-orange-850 font-bold font-mono text-[9px] rounded-md tracking-wider uppercase">NOTIFIKASI INSTAN</span>
+                <span className="px-2 py-0.5 bg-orange-100 text-orange-850 font-bold font-mono text-[11px] rounded-md tracking-wider uppercase">NOTIFIKASI INSTAN</span>
                 <h4 className="text-sm font-bold text-slate-800">Petunjuk Sinkronisasi Data</h4>
                 <p className="text-xs text-slate-650 leading-relaxed">
                   Semua form pengeditan pada panel admin bersifat reaktif. Menambahkan guru atau siswa yang ditunjuk menjadi <strong>Ketua Kelas</strong> secara otomatis membukakan akses akun login baru dengan password default sesuai kriteria sistem demi kenyamanan evaluasi.
@@ -868,29 +946,29 @@ export default function AdminPanel({
               </p>
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-medium">
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">DATABASE ENGINE</span>
+                  <span className="text-slate-400 block mb-0.5 text-xs">DATABASE ENGINE</span>
                   <strong className="text-slate-800 font-bold">{dbConfig?.dbType || 'MySQL'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">HOST & PORT KONEKSI</span>
+                  <span className="text-slate-400 block mb-0.5 text-xs">HOST & PORT KONEKSI</span>
                   <strong className="text-slate-800 font-mono">{dbConfig?.host || 'localhost'}:{dbConfig?.port || '3306'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">NAMA DATABASE</span>
+                  <span className="text-slate-400 block mb-0.5 text-xs">NAMA DATABASE</span>
                   <strong className="text-slate-800 font-mono text-indigo-600">{dbConfig?.name || 'jurnalku_smk'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">PENGGUNA / USER</span>
+                  <span className="text-slate-400 block mb-0.5 text-xs">PENGGUNA / USER</span>
                   <strong className="text-slate-800 font-mono">{dbConfig?.user || 'root'}</strong>
                 </div>
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <span className="text-slate-400 block mb-0.5 text-[9.5px]">KATA SANDI / PASSWORD</span>
+                  <span className="text-slate-400 block mb-0.5 text-xs">KATA SANDI / PASSWORD</span>
                   <strong className="text-slate-500 font-mono">•••••••• (Disembunyikan)</strong>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   <div>
-                    <span className="text-emerald-800 block text-[9.5px] font-bold uppercase tracking-wider">STATUS KONEKSI</span>
+                    <span className="text-emerald-800 block text-xs font-bold uppercase tracking-wider">STATUS KONEKSI</span>
                     <strong className="text-emerald-900 font-black">🟢 AKTIF (.env Loaded)</strong>
                   </div>
                 </div>
@@ -904,84 +982,133 @@ export default function AdminPanel({
         {activeSubTab === 'admin-users' && (
           <div className="grid lg:grid-cols-12 gap-6">
             
-            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-210 shadow-sm self-start">
-              <h3 className="text-sm font-bold text-slate-800 tracking-wider uppercase mb-5 flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                <Key className="w-4 h-4 text-orange-500" />
-                Registrasi Akun Baru
-              </h3>
-              
-              <form onSubmit={handleAddUser} className="space-y-4 text-left">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Username Akun</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="misal: ahmad_rpl"
-                    value={userUsername}
-                    onChange={(e) => setUserUsername(e.target.value)}
-                    className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Lengkap Pemilik</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="misal: Ahmad Yani"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none focus:bg-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+            <div className="lg:col-span-5 space-y-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-210 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-800 tracking-wider uppercase mb-5 flex items-center gap-1.5 border-b border-slate-100 pb-3">
+                  <Key className="w-4 h-4 text-orange-500" />
+                  Registrasi Akun Baru
+                </h3>
+                
+                <form onSubmit={handleAddUser} className="space-y-4 text-left">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Akses Role</label>
-                    <select
-                      value={userRole}
-                      onChange={(e) => setUserRole(e.target.value as UserRole)}
-                      className="block w-full px-2.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-850 text-xs focus:outline-none"
-                    >
-                      <option value="admin">Administrator</option>
-                      <option value="guru">Guru Mengampu</option>
-                      <option value="siswa">Siswa Ketua Kelas</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Password Default</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Username Akun</label>
                     <input
                       type="text"
-                      placeholder="admin123/guru123..."
-                      value={userPassword}
-                      onChange={(e) => setUserPassword(e.target.value)}
-                      className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                      required
+                      placeholder="misal: ahmad_rpl"
+                      value={userUsername}
+                      onChange={(e) => setUserUsername(e.target.value)}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none focus:bg-white"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Lengkap Pemilik</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="misal: Ahmad Yani"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Akses Role</label>
+                      <select
+                        value={userRole}
+                        onChange={(e) => setUserRole(e.target.value as UserRole)}
+                        className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-850 text-sm focus:outline-none"
+                      >
+                        <option value="admin">Administrator</option>
+                        <option value="guru">Guru Mengampu</option>
+                        <option value="siswa">Siswa Ketua Kelas</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Password Default</label>
+                      <input
+                        type="text"
+                        placeholder="admin123/guru123..."
+                        value={userPassword}
+                        onChange={(e) => setUserPassword(e.target.value)}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                      <span>Reference ID (Optional)</span>
+                      <span className="text-[11px] text-slate-400 font-normal">Hubungkan ke ID Guru/Siswa</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: gur-1 atau sis-1"
+                      value={userRefId}
+                      onChange={(e) => setUserRefId(e.target.value)}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Daftarkan Akun Baru</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* IMPORT CSV AKUN */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-210 shadow-sm space-y-4 text-left">
+                <h3 className="text-xs font-bold text-slate-800 tracking-wider uppercase flex items-center gap-1.5 border-b border-slate-100 pb-2.5">
+                  <Upload className="w-3.5 h-3.5 text-orange-500" />
+                  Import CSV Massal (User/Akun)
+                </h3>
+                
+                <div className="text-[11px] text-slate-500 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <p className="font-bold text-slate-700">Format Kolom CSV:</p>
+                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-xs text-orange-700 font-bold overflow-x-auto whitespace-nowrap">
+                    username,name,role,password,reference_id
+                  </code>
+                  <p className="font-bold text-slate-700 mt-1.5">Contoh baris data:</p>
+                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-650 block leading-tight overflow-x-auto whitespace-pre-wrap">
+username,name,role,password,reference_id
+budi_guru,Drs. Budi M.Pd.,guru,guru123,gur-1
+sis_ahmad,Ahmad Yani,siswa,siswa123,sis-1
+                  </pre>
+                  <p className="text-xs text-slate-400 leading-normal mt-1">
+                    * Kolom <code className="text-orange-700 font-bold">role</code> bernilai salah satu dari: <code className="font-bold">admin</code>, <code className="font-bold">guru</code>, atau <code className="font-bold">siswa</code>.<br />
+                    * Jika <code className="text-orange-700 font-bold">password</code> kosong, default pass: <code className="font-bold">admin123</code>, <code className="font-bold">guru123</code>, atau <code className="font-bold">siswa123</code>.
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 flex items-center justify-between">
-                    <span>Reference ID (Optional)</span>
-                    <span className="text-[9px] text-slate-400 font-normal">Hubungkan ke ID Guru/Siswa</span>
-                  </label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV Akun</label>
                   <input
-                    type="text"
-                    placeholder="Contoh: gur-1 atau sis-1"
-                    value={userRefId}
-                    onChange={(e) => setUserRefId(e.target.value)}
-                    className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        const text = evt.target?.result;
+                        if (typeof text === 'string') {
+                          handleImportUsersCSV(text);
+                        }
+                      };
+                      reader.readAsText(file);
+                      e.target.value = ''; // Reset file input
+                    }}
+                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-150 cursor-pointer"
                   />
                 </div>
-
-                <button
-                  type="submit"
-                  className="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Daftarkan Akun Baru</span>
-                </button>
-              </form>
+              </div>
             </div>
 
             <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-210 shadow-sm">
@@ -992,7 +1119,7 @@ export default function AdminPanel({
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-600">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5">User info</th>
                       <th scope="col" className="px-3 py-2.5">Akses Role</th>
@@ -1005,10 +1132,10 @@ export default function AdminPanel({
                       <tr key={u.id} className="hover:bg-slate-50/50">
                         <td className="px-3 py-3">
                           <p className="font-bold text-slate-800">{u.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">@{u.username}</p>
+                          <p className="text-xs text-slate-400 font-mono">@{u.username}</p>
                         </td>
                         <td className="px-3 py-3 capitalize font-bold">
-                          <span className={`px-2 py-0.5 rounded text-[10px] ${
+                          <span className={`px-2 py-0.5 rounded text-xs ${
                             u.role === 'admin' 
                               ? 'bg-amber-100 text-amber-800' 
                               : u.role === 'guru' 
@@ -1049,26 +1176,26 @@ export default function AdminPanel({
               
               <form onSubmit={handleAddJurusan} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Panjang Jurusan</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Panjang Jurusan</label>
                   <input
                     type="text"
                     required
                     placeholder="misal: Rekayasa Perangkat Lunak"
                     value={jurusanNama}
                     onChange={(e) => setJurusanNama(e.target.value)}
-                    className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Singkatan Resmi Jurusan</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Singkatan Resmi Jurusan</label>
                   <input
                     type="text"
                     required
                     placeholder="misal: RPL"
                     value={jurusanSingkatan}
                     onChange={(e) => setJurusanSingkatan(e.target.value)}
-                    className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
 
@@ -1100,7 +1227,7 @@ export default function AdminPanel({
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-650">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5">Singkatan</th>
                       <th scope="col" className="px-4 py-2.5">Nama Panjang Jurusan</th>
@@ -1152,23 +1279,23 @@ export default function AdminPanel({
               
               <form onSubmit={handleAddKelas} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Kelas (e.g. XI RPL 1)</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Kelas (e.g. XI RPL 1)</label>
                   <input
                     type="text"
                     required
                     placeholder="misal: XI RPL 1"
                     value={kelasNama}
                     onChange={(e) => setKelasNama(e.target.value)}
-                    className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Program Jurusan Kelas</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Program Jurusan Kelas</label>
                   <select
                     value={kelasJurusanId}
                     onChange={(e) => setKelasJurusanId(e.target.value)}
-                    className="block w-full px-2.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-xs focus:outline-none"
+                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
                     {jurusan.map((j) => (
                       <option key={j.id} value={j.id}>{j.nama} ({j.singkatan})</option>
@@ -1204,7 +1331,7 @@ export default function AdminPanel({
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-650">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5">Nama Kelas</th>
                       <th scope="col" className="px-4 py-2.5">Jurusan Terkait</th>
@@ -1262,26 +1389,26 @@ export default function AdminPanel({
                 
                 <form onSubmit={handleAddMapel} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Kode Mapel (e.g. RPL-12)</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Kode Mapel (e.g. RPL-12)</label>
                     <input
                       type="text"
                       required
                       placeholder="misal: RPL-A1"
                       value={mapelKode}
                       onChange={(e) => setMapelKode(e.target.value)}
-                      className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Panjang Matapelajaran</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Panjang Matapelajaran</label>
                     <input
                       type="text"
                       required
                       placeholder="misal: Pemrograman Berorientasi Objek"
                       value={mapelNama}
                       onChange={(e) => setMapelNama(e.target.value)}
-                      className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                     />
                   </div>
 
@@ -1314,20 +1441,20 @@ export default function AdminPanel({
                 
                 <div className="text-[11px] text-slate-550 text-slate-500 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <p className="font-bold text-slate-700">Format Kolom CSV:</p>
-                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-[10px] text-indigo-650 font-bold overflow-x-auto whitespace-nowrap">
+                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-xs text-indigo-650 font-bold overflow-x-auto whitespace-nowrap">
                     kode,nama
                   </code>
                   <p className="font-bold text-slate-700 mt-1.5">Contoh baris data:</p>
-                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[9px] text-slate-600 block leading-tight overflow-x-auto whitespace-pre-wrap">
+                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-600 block leading-tight overflow-x-auto whitespace-pre-wrap">
 kode,nama
 RPL-B3,Pemrograman Web Dasar
 COMMON-4,Bahasa Inggris
                   </pre>
-                  <p className="text-[9.5px] text-slate-400 leading-normal mt-1">Sistem otomatis mendeteksi tanda pemisah koma (,) atau titik-koma (;). Duplikasi kode mapel akan memperbarui nama mapel lama.</p>
+                  <p className="text-xs text-slate-400 leading-normal mt-1">Sistem otomatis mendeteksi tanda pemisah koma (,) atau titik-koma (;). Duplikasi kode mapel akan memperbarui nama mapel lama.</p>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV</label>
                   <input
                     type="file"
                     accept=".csv"
@@ -1344,7 +1471,7 @@ COMMON-4,Bahasa Inggris
                       reader.readAsText(file);
                       e.target.value = ''; // Reset file input
                     }}
-                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-150 cursor-pointer"
+                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-150 cursor-pointer"
                   />
                 </div>
               </div>
@@ -1358,7 +1485,7 @@ COMMON-4,Bahasa Inggris
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-650">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5">Kode</th>
                       <th scope="col" className="px-4 py-2.5">Nama Matapelajaran</th>
@@ -1407,35 +1534,35 @@ COMMON-4,Bahasa Inggris
                 
                 <form onSubmit={handleAddSiswa} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Lengkap Siswa</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Lengkap Siswa</label>
                     <input
                       type="text"
                       required
                       placeholder="misal: Randy Pangalila"
                       value={siswaNama}
                       onChange={(e) => setSiswaNama(e.target.value)}
-                      className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">NIS Siswa</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">NIS Siswa</label>
                       <input
                         type="text"
                         required
                         placeholder="e.g. 12404"
                         value={siswaNis}
                         onChange={(e) => setSiswaNis(e.target.value)}
-                        className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
                       <select
                         value={siswaKelasId}
                         onChange={(e) => setSiswaKelasId(e.target.value)}
-                        className="block w-full px-1.5 py-2 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-xs focus:outline-none"
+                        className="block w-full px-1.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                       >
                         {kelas.map((k) => (
                           <option key={k.id} value={k.id}>{k.nama}</option>
@@ -1448,7 +1575,7 @@ COMMON-4,Bahasa Inggris
                   <div className="p-3 bg-slate-55 bg-slate-100/50 rounded-xl flex items-center justify-between border border-slate-200">
                     <div>
                       <span className="block text-xs font-bold text-slate-700">Tunjuk Jadi Ketua Kelas?</span>
-                      <span className="text-[10px] text-slate-400 block">Diberi otorisasi mengisi jurnal harian</span>
+                      <span className="text-xs text-slate-400 block">Diberi otorisasi mengisi jurnal harian</span>
                     </div>
                     <input
                       type="checkbox"
@@ -1487,23 +1614,23 @@ COMMON-4,Bahasa Inggris
                 
                 <div className="text-[11px] text-slate-550 text-slate-500 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <p className="font-bold text-slate-700">Format Kolom CSV:</p>
-                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-[9.5px] text-orange-700 font-bold overflow-x-auto whitespace-nowrap">
+                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-xs text-orange-700 font-bold overflow-x-auto whitespace-nowrap">
                     nis,nama,kelas,is_ketua
                   </code>
                   <p className="font-bold text-slate-700 mt-1.5">Contoh baris data:</p>
-                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[9px] text-slate-650 block leading-tight overflow-x-auto whitespace-pre-wrap">
+                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-650 block leading-tight overflow-x-auto whitespace-pre-wrap">
 nis,nama,kelas,is_ketua
 12499,Rizky Pratama,XI RPL 1,false
 12501,M. Syahputra,XI RPL 1,true
                   </pre>
-                  <p className="text-[9.5px] text-slate-400 leading-normal mt-1">
+                  <p className="text-xs text-slate-400 leading-normal mt-1">
                     * Jika <code className="text-orange-700 font-bold">is_ketua</code> bernilai <code className="font-bold">true</code> atau <code className="font-bold">1</code>, sistem otomatis membukakan akun login ketua kelas (pass default: <code className="font-bold">siswa123</code>).<br />
                     * Jika nama kelas tidak terdaftar di sistem, sistem otomatis mendaftarkan nama kelas baru tersebut.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV Siswa</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV Siswa</label>
                   <input
                     type="file"
                     accept=".csv"
@@ -1520,7 +1647,7 @@ nis,nama,kelas,is_ketua
                       reader.readAsText(file);
                       e.target.value = ''; // Reset file input
                     }}
-                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-150 cursor-pointer"
+                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-150 cursor-pointer"
                   />
                 </div>
               </div>
@@ -1534,7 +1661,7 @@ nis,nama,kelas,is_ketua
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-650">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5">NIS</th>
                       <th scope="col" className="px-3 py-2.5">Nama Peserta Didik</th>
@@ -1557,11 +1684,11 @@ nis,nama,kelas,is_ketua
                           </td>
                           <td className="px-3 py-3.5 text-center">
                             {s.isKetuaKelas ? (
-                              <span className="inline-block bg-orange-100 text-orange-800 font-extrabold text-[9px] px-2.5 py-1 rounded-full border border-orange-200 uppercase tracking-wide">
+                              <span className="inline-block bg-orange-100 text-orange-800 font-extrabold text-[11px] px-2.5 py-1 rounded-full border border-orange-200 uppercase tracking-wide">
                                 Ketua Kelas (Active)
                               </span>
                             ) : (
-                              <span className="text-slate-405 text-stone-400 font-medium text-[10px]">—</span>
+                              <span className="text-slate-405 text-stone-400 font-medium text-xs">—</span>
                             )}
                           </td>
                           <td className="px-3 py-3 text-right whitespace-nowrap space-x-1">
@@ -1602,25 +1729,25 @@ nis,nama,kelas,is_ketua
                 
                 <form onSubmit={handleAddGuru} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Lengkap & Gelar Pendidik</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Lengkap & Gelar Pendidik</label>
                     <input
                       type="text"
                       required
                       placeholder="misal: Siti Aminah, S.Pd."
                       value={guruNama}
                       onChange={(e) => setGuruNama(e.target.value)}
-                      className="block w-full px-3.5 py-2 bg-slate-55 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-xs focus:outline-none"
+                      className="block w-full px-3.5 py-2 bg-slate-55 bg-slate-50 border border-slate-210 rounded-xl text-slate-800 text-sm focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Kode Guru (Pengganti NIP)</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Kode Guru (Pengganti NBM)</label>
                     <input
                       type="text"
                       placeholder="e.g. G-005 atau KGR-04"
                       value={guruKode}
                       onChange={(e) => setGuruKode(e.target.value)}
-                      className="block w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
                     />
                   </div>
 
@@ -1653,23 +1780,23 @@ nis,nama,kelas,is_ketua
                 
                 <div className="text-[11px] text-slate-500 space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <p className="font-bold text-slate-700">Format Kolom CSV:</p>
-                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-[9.5px] text-orange-700 font-bold overflow-x-auto whitespace-nowrap">
+                  <code className="block p-1 bg-white border border-slate-200 rounded font-mono text-xs text-orange-700 font-bold overflow-x-auto whitespace-nowrap">
                     kode,nama
                   </code>
                   <p className="font-bold text-slate-700 mt-1.5">Contoh baris data:</p>
-                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[9px] text-slate-650 block leading-tight overflow-x-auto whitespace-pre-wrap">
+                  <pre className="p-1 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-650 block leading-tight overflow-x-auto whitespace-pre-wrap">
 kode,nama
 KGR-009,H. Ahmad Dahlan, M.Ag.
 KGR-010,Siti Zubaidah, S.Pd.
                   </pre>
-                  <p className="text-[9.5px] text-slate-400 leading-normal mt-1">
-                    * Kode Guru wajib berupa text tanpa spasi (pengganti NIP).<br />
+                  <p className="text-xs text-slate-400 leading-normal mt-1">
+                    * Kode Guru wajib berupa text tanpa spasi (pengganti NBM).<br />
                     * Guru yang didaftarkan via CSV otomatis dilesisikan akun login guru baru (password default: <code className="font-bold">guru123</code>).
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV Guru</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih File CSV Guru</label>
                   <input
                     type="file"
                     accept=".csv"
@@ -1686,7 +1813,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                       reader.readAsText(file);
                       e.target.value = ''; // Reset file input
                     }}
-                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-150 cursor-pointer"
+                    className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-150 cursor-pointer"
                   />
                 </div>
               </div>
@@ -1700,7 +1827,7 @@ KGR-010,Siti Zubaidah, S.Pd.
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-650">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5">Kode Guru</th>
                       <th scope="col" className="px-3 py-2.5">Nama Tenaga Pendidik</th>
@@ -1748,11 +1875,11 @@ KGR-010,Siti Zubaidah, S.Pd.
               
               <form onSubmit={handleAddMengampu} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Guru Pengajar</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Guru Pengajar</label>
                   <select
                     value={ampuGuruId}
                     onChange={(e) => setAmpuGuruId(e.target.value)}
-                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-xs focus:outline-none"
+                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
                     {guru.map((g) => (
                       <option key={g.id} value={g.id}>{g.nama}</option>
@@ -1761,11 +1888,11 @@ KGR-010,Siti Zubaidah, S.Pd.
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Mata Pelajaran</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Mata Pelajaran</label>
                   <select
                     value={ampuMapelId}
                     onChange={(e) => setAmpuMapelId(e.target.value)}
-                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-xs focus:outline-none"
+                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
                     {mapel.map((m) => (
                       <option key={m.id} value={m.id}>[{m.kode}] - {m.nama}</option>
@@ -1774,11 +1901,11 @@ KGR-010,Siti Zubaidah, S.Pd.
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
                   <select
                     value={ampuKelasId}
                     onChange={(e) => setAmpuKelasId(e.target.value)}
-                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-xs focus:outline-none"
+                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
                     {kelas.map((k) => (
                       <option key={k.id} value={k.id}>{k.nama}</option>
@@ -1788,7 +1915,7 @@ KGR-010,Siti Zubaidah, S.Pd.
 
                 <button
                   type="submit"
-                  className="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Mankan Alokasi Mengampu</span>
@@ -1804,7 +1931,7 @@ KGR-010,Siti Zubaidah, S.Pd.
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-slate-650">
-                  <thead className="bg-slate-50 text-slate-700 uppercase text-[9px] font-bold">
+                  <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
                       <th scope="col" className="px-3 py-2.5 col-span-3">Pendidik</th>
                       <th scope="col" className="px-3 py-2.5">Matapelajaran</th>
@@ -1824,7 +1951,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                             {matchedMapel ? matchedMapel.nama : 'Mapel dihapus'}
                           </td>
                           <td className="px-3 py-3 text-center">
-                            <span className="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                            <span className="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded text-xs">
                               {matchedKelas ? matchedKelas.nama : 'Kelas dihapus'}
                             </span>
                           </td>
@@ -2001,7 +2128,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white p-5 border border-slate-200 rounded-3xl shadow-sm flex flex-col justify-between">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-450 tracking-wider block uppercase">KBM Terpantau</span>
+                        <span className="text-xs font-bold text-slate-450 tracking-wider block uppercase">KBM Terpantau</span>
                         <div className="flex items-baseline mt-2 gap-2">
                           <p className="text-3xl font-black text-slate-800">{monitoredClassesCount}</p>
                           <p className="text-xs text-slate-400 font-bold">dr {activeCount} kelas</p>
@@ -2014,24 +2141,24 @@ KGR-010,Siti Zubaidah, S.Pd.
                             style={{ width: `${Math.min(100, coverageRatePercent)}%` }}
                           />
                         </div>
-                        <span className="text-[9px] text-slate-450 font-mono mt-1 block font-semibold">{coverageRatePercent}% Kelas Menginput</span>
+                        <span className="text-[11px] text-slate-450 font-mono mt-1 block font-semibold">{coverageRatePercent}% Kelas Menginput</span>
                       </div>
                     </div>
 
                     <div className="bg-white p-5 border border-slate-200 rounded-3xl shadow-sm flex flex-col justify-between">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-450 tracking-wider block uppercase">Jam Sesi Terlaksana</span>
+                        <span className="text-xs font-bold text-slate-450 tracking-wider block uppercase">Jam Sesi Terlaksana</span>
                         <p className="text-3xl font-black text-emerald-600 mt-2">{totalSessionsCompleted} <span className="text-xs font-normal text-slate-400">sesi</span></p>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono mt-3 font-semibold">Tercatat di jurnalku hari ini</span>
+                      <span className="text-xs text-slate-400 font-mono mt-3 font-semibold">Tercatat di jurnalku hari ini</span>
                     </div>
 
                     <div className="bg-white p-5 border border-slate-200 rounded-3xl shadow-sm flex flex-col justify-between">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-450 tracking-wider block uppercase">Rasio Kehadiran Guru</span>
+                        <span className="text-xs font-bold text-slate-450 tracking-wider block uppercase">Rasio Kehadiran Guru</span>
                         <p className="text-3xl font-black text-indigo-700 mt-2">{teacherPresenceRate}%</p>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5 text-[9px] font-bold font-mono">
+                      <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold font-mono">
                         <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">{presentCount} Hadir</span>
                         <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md">{tugasCount} Tugas</span>
                         {tidakCount > 0 && <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md">{tidakCount} Alfa</span>}
@@ -2040,10 +2167,10 @@ KGR-010,Siti Zubaidah, S.Pd.
 
                     <div className="bg-white p-5 border border-slate-200 rounded-3xl shadow-sm flex flex-col justify-between">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-450 tracking-wider block uppercase">Pembelajaran Mandiri</span>
+                        <span className="text-xs font-bold text-slate-450 tracking-wider block uppercase">Pembelajaran Mandiri</span>
                         <p className="text-3xl font-black text-amber-600 mt-2">{tugasCount} <span className="text-xs font-normal text-slate-400">agenda</span></p>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono mt-3 font-semibold">Guru memberikan instruksi tugas</span>
+                      <span className="text-xs text-slate-400 font-mono mt-3 font-semibold">Guru memberikan instruksi tugas</span>
                     </div>
                   </div>
 
@@ -2121,11 +2248,11 @@ KGR-010,Siti Zubaidah, S.Pd.
                                 <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
                                   <div>
                                     <h5 className="font-extrabold text-lg text-slate-800 font-display leading-tight">{k.nama}</h5>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-wider truncate max-w-[200px]" title={matchedJurusan?.nama}>
+                                    <p className="text-xs font-bold text-slate-400 uppercase mt-0.5 tracking-wider truncate max-w-[200px]" title={matchedJurusan?.nama}>
                                       {matchedJurusan?.nama || 'Jurusan Sekolah'}
                                     </p>
                                   </div>
-                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center gap-1.5 ${
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold flex items-center gap-1.5 ${
                                     classInDateEntries.length >= 4
                                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-100'
                                       : classInDateEntries.length > 0
@@ -2152,7 +2279,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                                     <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between text-left gap-3">
                                       <div>
                                         <p className="text-xs font-bold text-rose-800">Laporan Jurnal Belum Diisi</p>
-                                        <p className="text-[10px] text-slate-500 mt-0.5">Ketua Kelas bertanggung jawab menginput hari ini.</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">Ketua Kelas bertanggung jawab menginput hari ini.</p>
                                       </div>
                                       {(() => {
                                         const ketua = siswa.find(s => s.kelasId === k.id && s.isKetuaKelas);
@@ -2163,7 +2290,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                                               href={`https://wa.me/?text=${waText}`}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] rounded-lg transition-all flex items-center gap-1.5 text-center cursor-pointer w-fit"
+                                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg transition-all flex items-center gap-1.5 text-center cursor-pointer w-fit"
                                             >
                                               <Phone className="w-3 h-3" />
                                               <span>Hubungi Ketua: {ketua.nama}</span>
@@ -2171,7 +2298,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                                           );
                                         }
                                         return (
-                                          <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">Kosong</span>
+                                          <span className="text-[11px] font-extrabold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">Kosong</span>
                                         );
                                       })()}
                                     </div>
@@ -2208,17 +2335,17 @@ KGR-010,Siti Zubaidah, S.Pd.
                                             <div className="flex justify-between items-start gap-2">
                                               <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-1.5">
-                                                  <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider">Jam Pelajaran Ke-{journalForSlot.jamKe}</span>
+                                                  <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">Jam Pelajaran Ke-{journalForSlot.jamKe}</span>
                                                 </div>
                                                 <p className="text-xs font-bold text-slate-800 mt-1 truncate group-hover/slot:text-indigo-600 transition-colors">
                                                   {matchedMapel ? matchedMapel.nama : 'Mapel Terhapus'}
                                                 </p>
-                                                <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
+                                                <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
                                                   Guru: {teacherNames}
                                                 </p>
                                               </div>
                                               
-                                              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider block shrink-0 ${
+                                              <span className={`px-2 py-0.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider block shrink-0 ${
                                                 journalForSlot.statusKehadiran === 'hadir'
                                                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-200/50'
                                                   : journalForSlot.statusKehadiran === 'tugas'
@@ -2229,7 +2356,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                                               </span>
                                             </div>
                                             {journalForSlot.catatan && (
-                                              <div className="mt-2 text-[10px] text-slate-500 bg-white/70 p-2 border border-slate-100 rounded-xl block truncate italic">
+                                              <div className="mt-2 text-xs text-slate-500 bg-white/70 p-2 border border-slate-100 rounded-xl block truncate italic">
                                                 "{journalForSlot.catatan}"
                                               </div>
                                             )}
@@ -2241,7 +2368,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                               </div>
 
                               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[10px] text-slate-400 font-bold font-mono">
+                                <span className="text-xs text-slate-400 font-bold font-mono">
                                   {classInDateEntries.length} JAM TERISI
                                 </span>
                                 <button
@@ -2273,7 +2400,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                       </div>
                       <div>
                         <h4 className="font-extrabold text-slate-800 tracking-tight font-display text-base leading-none">Isi Jurnal Manual (Admin)</h4>
-                        <span className="text-[9px] text-indigo-605 font-mono font-bold uppercase mt-1 block tracking-wider">INPUT DATA KBM OLEH ADMINISTRATOR</span>
+                        <span className="text-[11px] text-indigo-605 font-mono font-bold uppercase mt-1 block tracking-wider">INPUT DATA KBM OLEH ADMINISTRATOR</span>
                       </div>
                     </div>
                     <button 
@@ -2423,7 +2550,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                             );
                           })}
                         </div>
-                        <p className="text-[9.5px] text-slate-400 mt-1">Sistem otomatis menyarankan guru kurikulum, namun Anda dapat menyesuaikan secara bebas.</p>
+                        <p className="text-xs text-slate-400 mt-1">Sistem otomatis menyarankan guru kurikulum, namun Anda dapat menyesuaikan secara bebas.</p>
                       </div>
 
                       {/* Status Kehadiran */}
@@ -2505,7 +2632,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                       </div>
                       <div>
                         <h4 className="font-extrabold text-slate-800 tracking-tight font-display text-base leading-none">Rincian Laporan KBM</h4>
-                        <span className="text-[9px] text-indigo-605 font-mono font-bold uppercase mt-1 block tracking-wider">PRESENSI & MATERI DETIL</span>
+                        <span className="text-[11px] text-indigo-605 font-mono font-bold uppercase mt-1 block tracking-wider">PRESENSI & MATERI DETIL</span>
                       </div>
                     </div>
                     <button 
@@ -2527,11 +2654,11 @@ KGR-010,Siti Zubaidah, S.Pd.
                         <div className="space-y-4 text-sm">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">SASARAN KELAS</span>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">SASARAN KELAS</span>
                               <strong className="text-slate-800 mt-1 block font-display text-base">{matKelas ? matKelas.nama : 'Kelas dihapus'}</strong>
                             </div>
                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">HARI / TANGGAL</span>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">HARI / TANGGAL</span>
                               <strong className="text-slate-700 mt-1 block">
                                 {selectedRekapJurnal.hari}, {new Date(selectedRekapJurnal.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                               </strong>
@@ -2540,18 +2667,18 @@ KGR-010,Siti Zubaidah, S.Pd.
 
                           <div className="space-y-3 bg-white border border-slate-200 p-4 rounded-2xl">
                             <div>
-                              <span className="text-[9px] font-bold text-slate-420 text-slate-400 uppercase tracking-wider block">MATA PELAJARAN</span>
+                              <span className="text-[11px] font-bold text-slate-420 text-slate-400 uppercase tracking-wider block">MATA PELAJARAN</span>
                               <strong className="text-slate-800 block text-base mt-0.5">{matMapel ? matMapel.nama : 'Mapel Terhapus'}</strong>
                             </div>
                             <div className="border-t border-slate-100 pt-2.5">
-                              <span className="text-[9px] font-bold text-slate-420 text-slate-400 uppercase tracking-wider block">GURU PENGAMPU</span>
+                              <span className="text-[11px] font-bold text-slate-420 text-slate-400 uppercase tracking-wider block">GURU PENGAMPU</span>
                               <strong className="text-slate-800 block mt-0.5">
                                 {selectedRekapJurnal.guruId ? selectedRekapJurnal.guruId.split(',').map(subId => {
                                   const found = guru.find(x => x.id === subId.trim());
                                   return found ? found.nama : 'Pendidik dihapus';
                                 }).join(' & ') : 'Pendidik dihapus'}
                               </strong>
-                              <span className="text-[9.5px] text-slate-500 font-mono font-semibold block">
+                              <span className="text-xs text-slate-500 font-mono font-semibold block">
                                 Kode Guru: {selectedRekapJurnal.guruId ? selectedRekapJurnal.guruId.split(',').map(subId => {
                                   const found = guru.find(x => x.id === subId.trim());
                                   return found ? found.kodeGuru : '-';
@@ -2562,11 +2689,11 @@ KGR-010,Siti Zubaidah, S.Pd.
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">PENGALOKASIAN PERIODE</span>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">PENGALOKASIAN PERIODE</span>
                               <strong className="text-indigo-700 block mt-1">Sesi Ke-{selectedRekapJurnal.jamKe}</strong>
                             </div>
                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/50">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">PRESENSI PENDIDIK</span>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">PRESENSI PENDIDIK</span>
                               <span className={`inline-flex items-center gap-1.5 mt-1 text-xs font-bold uppercase ${
                                 selectedRekapJurnal.statusKehadiran === 'hadir'
                                   ? 'text-emerald-700'
@@ -2587,13 +2714,13 @@ KGR-010,Siti Zubaidah, S.Pd.
                           </div>
 
                           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">RINGKASAN MATERI YANG DIAJARKAN</span>
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">RINGKASAN MATERI YANG DIAJARKAN</span>
                             <p className="text-slate-700 mt-1 text-xs leading-relaxed italic bg-white p-2.5 rounded-xl border border-slate-200/40 select-text font-medium">
                               {selectedRekapJurnal.catatan ? `"${selectedRekapJurnal.catatan}"` : 'Tidak ada penjelasan materi yang diinput.'}
                             </p>
                           </div>
 
-                          <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[9px] font-semibold text-slate-400 tracking-wider uppercase font-mono">
+                          <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-400 tracking-wider uppercase font-mono">
                             <span>Saksi: {matSiswa ? `${matSiswa.nama} (Ketua Kelas)` : 'Ketua Kelas / Siswa'}</span>
                             <span>{new Date(selectedRekapJurnal.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
                           </div>
@@ -2648,7 +2775,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                     required
                     value={schoolInfo.nama}
                     onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nama: e.target.value })}
-                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-xs focus:outline-none"
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:outline-none"
                   />
                 </div>
                 <div>
@@ -2658,7 +2785,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                     required
                     value={schoolInfo.npsn}
                     onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, npsn: e.target.value })}
-                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
               </div>
@@ -2670,7 +2797,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                   required
                   value={schoolInfo.alamat}
                   onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, alamat: e.target.value })}
-                  className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none"
+                  className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                 />
               </div>
 
@@ -2682,17 +2809,40 @@ KGR-010,Siti Zubaidah, S.Pd.
                     required
                     value={schoolInfo.kepalaSekolah}
                     onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, kepalaSekolah: e.target.value })}
-                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5">NIP/Kode Kepala Sekolah</label>
+                  <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5">NBM Kepala Sekolah</label>
                   <input
                     type="text"
                     required
-                    value={schoolInfo.nipKepalaSekolah}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nipKepalaSekolah: e.target.value })}
-                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none"
+                    value={schoolInfo.nbmKepalaSekolah}
+                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nbmKepalaSekolah: e.target.value })}
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5">Nama Waka Kurikulum</label>
+                  <input
+                    type="text"
+                    required
+                    value={schoolInfo.wakaKurikulum}
+                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, wakaKurikulum: e.target.value })}
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5">NBM Waka Kurikulum</label>
+                  <input
+                    type="text"
+                    required
+                    value={schoolInfo.nbmWakaKurikulum}
+                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nbmWakaKurikulum: e.target.value })}
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
               </div>

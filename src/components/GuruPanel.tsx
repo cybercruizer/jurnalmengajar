@@ -112,7 +112,7 @@ export default function GuruPanel({
               Tenaga Pendidik Berwenang
             </span>
             <h2 className="text-3xl font-black tracking-tight leading-none mb-2 font-display">{guru.nama}</h2>
-            <p className="text-[12px] font-mono text-indigo-200 uppercase tracking-widest">KODE GURU: {guru.kodeGuru || 'Belum Terdaftar'}</p>
+            <p className="text-sm font-mono text-indigo-200 uppercase tracking-widest">KODE GURU: {guru.kodeGuru || 'Belum Terdaftar'}</p>
             <p className="text-indigo-100 text-sm mt-3 max-w-xl">
               Gunakan panel ini untuk mereview, memvalidasi, dan mencetak laporan harian, mingguan, maupun bulanan berdasarkan input dari ketua kelas.
             </p>
@@ -121,14 +121,14 @@ export default function GuruPanel({
           <div className="flex gap-2">
             <button
               onClick={() => onPrintPreview('harian', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
-              className="py-3 px-4 bg-white hover:bg-slate-50 text-indigo-700 font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
+              className="py-3 px-4 bg-white hover:bg-slate-50 text-indigo-700 font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak Harian</span>
             </button>
             <button
               onClick={() => onPrintPreview('mingguan', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
-              className="py-3 px-4 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
+              className="py-3 px-4 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak Mingguan</span>
@@ -143,47 +143,47 @@ export default function GuruPanel({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             
             <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-sm">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Jam Mengajar</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total Jam Mengajar</span>
               <div className="flex justify-between items-end mt-2">
                 <span className="text-3xl font-black text-slate-800">{totalMyTeaching}</span>
                 <span className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                   <FileText className="w-5 h-5" />
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono mt-2">Terhitung sejak awal semester</p>
+              <p className="text-xs text-slate-400 font-mono mt-2">Terhitung sejak awal semester</p>
             </div>
 
             <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-sm">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Hadir Mengajar</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Hadir Mengajar</span>
               <div className="flex justify-between items-end mt-2">
                 <span className="text-3xl font-black text-emerald-600">{totalHadir}</span>
                 <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
                   <CheckCircle className="w-5 h-5" />
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono mt-2">Rasio kehadiran: {totalMyTeaching > 0 ? Math.round((totalHadir/totalMyTeaching)*100) : 100}%</p>
+              <p className="text-xs text-slate-400 font-mono mt-2">Rasio kehadiran: {totalMyTeaching > 0 ? Math.round((totalHadir/totalMyTeaching)*100) : 100}%</p>
             </div>
 
             <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-sm">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tugas Terdistribusi</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Tugas Terdistribusi</span>
               <div className="flex justify-between items-end mt-2">
                 <span className="text-3xl font-black text-amber-600">{totalTugas}</span>
                 <span className="p-2 bg-amber-50 text-amber-600 rounded-lg">
                   <FileSpreadsheet className="w-5 h-5" />
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono mt-2">Tugas mandiri via Ketua Kelas</p>
+              <p className="text-xs text-slate-400 font-mono mt-2">Tugas mandiri via Ketua Kelas</p>
             </div>
 
             <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-sm">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Guru Berhalangan</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Guru Berhalangan</span>
               <div className="flex justify-between items-end mt-2">
                 <span className="text-3xl font-black text-rose-600">{totalTidak}</span>
                 <span className="p-2 bg-rose-50 text-rose-600 rounded-lg">
                   <AlertTriangle className="w-5 h-5" />
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono mt-2">Tanpa tugas / jam kosong</p>
+              <p className="text-xs text-slate-400 font-mono mt-2">Tanpa tugas / jam kosong</p>
             </div>
 
           </div>
@@ -201,11 +201,11 @@ export default function GuruPanel({
                 
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">PILIH KELAS SASARAN</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">PILIH KELAS SASARAN</label>
                     <select
                       value={selectedClassId}
                       onChange={(e) => setSelectedClassId(e.target.value)}
-                      className="block w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                      className="block w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                     >
                       {kelas.map((k) => (
                         <option key={k.id} value={k.id}>{k.nama}</option>
@@ -213,12 +213,12 @@ export default function GuruPanel({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TANGGAL DASAR</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">TANGGAL DASAR</label>
                     <input
                       type="date"
                       value={filterDate}
                       onChange={(e) => setFilterDate(e.target.value)}
-                      className="block w-full text-xs font-semibold p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                      className="block w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
                     />
                   </div>
                 </div>
@@ -227,21 +227,21 @@ export default function GuruPanel({
               <div className="grid grid-cols-3 gap-2 mt-6">
                 <button
                   onClick={() => onPrintPreview('harian', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
-                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1 border border-slate-250"
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-sm cursor-pointer transition-all flex items-center justify-center gap-1 border border-slate-250"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Cetak Harian</span>
                 </button>
                 <button
                   onClick={() => onPrintPreview('mingguan', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
-                  className="py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1 border border-rose-200/50"
+                  className="py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-sm cursor-pointer transition-all flex items-center justify-center gap-1 border border-rose-200/50"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Mingguan</span>
                 </button>
                 <button
                   onClick={() => onPrintPreview('bulanan', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
-                  className="py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1 border border-orange-200/50"
+                  className="py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-bold text-sm cursor-pointer transition-all flex items-center justify-center gap-1 border border-orange-200/50"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Bulanan</span>
@@ -314,7 +314,7 @@ export default function GuruPanel({
             
             {/* Date filter */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest mb-1.5 flex items-center gap-1 text-left">
+              <label className="block text-xs font-bold text-slate-450 uppercase tracking-widest mb-1.5 flex items-center gap-1 text-left">
                 <Calendar className="w-3 h-3 text-rose-500" />
                 Filter Per Tanggal
               </label>
@@ -322,19 +322,19 @@ export default function GuruPanel({
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500"
+                className="w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500"
               />
             </div>
 
             {/* Class filter */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest mb-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-450 uppercase tracking-widest mb-1.5 text-left">
                 Filter Struktur Kelas
               </label>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
-                className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                className="w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
               >
                 <option value="all">Semua Kelas</option>
                 {kelas.map((k) => (
@@ -345,13 +345,13 @@ export default function GuruPanel({
 
             {/* Mapel filter */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest mb-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-450 uppercase tracking-widest mb-1.5 text-left">
                 Filter Mata Pelajaran
               </label>
               <select
                 value={selectedMapelId}
                 onChange={(e) => setSelectedMapelId(e.target.value)}
-                className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                className="w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
               >
                 <option value="all">Semua Mapel</option>
                 {mapel.map((m) => (
@@ -362,7 +362,7 @@ export default function GuruPanel({
 
             {/* Search filter */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest mb-1.5 text-left">
+              <label className="block text-xs font-bold text-slate-450 uppercase tracking-widest mb-1.5 text-left">
                 Cari Berdasarkan Bahasan
               </label>
               <div className="relative">
@@ -382,7 +382,7 @@ export default function GuruPanel({
           {/* Table view */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-slate-650 min-w-[800px]">
-              <thead className="bg-slate-50 text-slate-800 uppercase text-[10px] tracking-wider font-bold border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-800 uppercase text-xs tracking-wider font-bold border-b border-slate-200">
                 <tr>
                   <th scope="col" className="px-4 py-3">Hari & Tanggal</th>
                   <th scope="col" className="px-4 py-3">Jam Ke</th>
@@ -405,7 +405,7 @@ export default function GuruPanel({
                     <tr key={jr.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="font-bold text-slate-800 block text-xs">{jr.tanggal}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{jr.hari}</span>
+                        <span className="text-xs text-slate-400 font-mono">{jr.hari}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className="font-bold text-xs bg-slate-100 text-slate-700 py-1 px-2 rounded">
@@ -449,7 +449,7 @@ export default function GuruPanel({
 
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
             <span>Menampilkan <strong>{filteredJournals.length}</strong> dari total {activeJournalDataset.length} entri terdata.</span>
-            <span className="bg-slate-100 px-2.5 py-1 rounded-md font-mono text-[10px]">Scope: {viewScope === 'my' ? 'Mata Pelajaran Anda' : 'Semua Guru'}</span>
+            <span className="bg-slate-100 px-2.5 py-1 rounded-md font-mono text-xs">Scope: {viewScope === 'my' ? 'Mata Pelajaran Anda' : 'Semua Guru'}</span>
           </div>
 
         </div>

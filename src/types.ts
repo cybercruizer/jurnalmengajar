@@ -67,7 +67,9 @@ export interface Sekolah {
   npsn: string;
   alamat: string;
   kepalaSekolah: string;
-  nipKepalaSekolah: string;
+  nbmKepalaSekolah: string;
+  wakaKurikulum: string;
+  nbmWakaKurikulum: string;
   website: string;
   email: string;
 }

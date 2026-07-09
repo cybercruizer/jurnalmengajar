@@ -74,7 +74,9 @@ CREATE TABLE `sekolah` (
   `npsn` varchar(50) NOT NULL,
   `alamat` text NOT NULL,
   `kepala_sekolah` varchar(100) NOT NULL,
-  `nip_kepala_sekolah` varchar(50) NOT NULL,
+  `nbm_kepala_sekolah` varchar(50) NOT NULL,
+  `waka_kurikulum` varchar(100) NOT NULL,
+  `nbm_waka_kurikulum` varchar(50) NOT NULL,
   `website` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL
 );

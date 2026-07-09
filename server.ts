@@ -10,6 +10,32 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  const syncQueues: Record<string, Promise<any>> = {};
+
+  async function runInQueue(table: string, task: () => Promise<any>): Promise<any> {
+    const previous = syncQueues[table] || Promise.resolve();
+    let resolveNext: any;
+    const nextPromise = new Promise((resolve) => {
+      resolveNext = resolve;
+    });
+    syncQueues[table] = nextPromise;
+
+    try {
+      await previous;
+    } catch (err) {
+      // Ignore previous errors to keep queue running
+    }
+
+    try {
+      const result = await task();
+      resolveNext();
+      return result;
+    } catch (err) {
+      resolveNext();
+      throw err;
+    }
+  }
+
   app.use(express.json());
 
   // API Route to write to .env
@@ -166,6 +192,36 @@ async function startServer() {
     }
   });
 
+  // API Route for Changing Password
+  app.post("/api/change-password", async (req, res) => {
+    try {
+      const { username, currentPassword, newPassword } = req.body;
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { eq, and } = await import("drizzle-orm");
+
+      // Verify current user & password
+      const user = await db.select().from(schema.users).where(
+        and(eq(schema.users.username, username), eq(schema.users.password, currentPassword))
+      ).limit(1);
+
+      if (user.length === 0) {
+        return res.status(400).json({ success: false, message: "Password lama salah" });
+      }
+
+      // Update password
+      await db.update(schema.users)
+        .set({ password: newPassword })
+        .where(eq(schema.users.username, username));
+
+      res.json({ success: true, message: "Password berhasil diperbarui" });
+    } catch (error: any) {
+      console.error("Change password error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // API Route for generic sync
   app.post("/api/sync/:table", express.json({limit: "10mb"}), async (req, res) => {
     try {
@@ -174,7 +230,6 @@ async function startServer() {
       const { getDb, getPool } = await import("./src/db/index.js");
       const db = await getDb();
       const schema = await import("./src/db/schema.js");
-      const { sql } = await import("drizzle-orm");
 
       const tableSchema = (schema as any)[table];
       if (!tableSchema) {
@@ -185,36 +240,53 @@ async function startServer() {
         return res.status(400).json({ success: false, message: "Data must be an array" });
       }
 
-      const pool = await getPool();
-      const conn = await pool.getConnection();
-
-      try {
-        await conn.query("SET FOREIGN_KEY_CHECKS=0");
-        
-        // Actually, we can get the actual table name from the schema definition
-        // Drizzle stores it somewhere, but we know the tables map 1:1 except for "guruMengampu" -> "guru_mengampu"
-        let actualTableName = table;
-        if (table === "guruMengampu") actualTableName = "guru_mengampu";
-
-        await conn.query(`TRUNCATE TABLE \`${actualTableName}\``);
-
-        if (data.length > 0) {
-          // Chunk inserts to avoid query size limits
-          const chunkSize = 50;
-          for (let i = 0; i < data.length; i += chunkSize) {
-            const chunk = data.slice(i, i + chunkSize);
-            await db.insert(tableSchema).values(chunk);
+      // Deduplicate elements by id to prevent "Duplicate entry for key PRIMARY" in the same batch
+      const uniqueData = [];
+      const seenIds = new Set();
+      for (const item of data) {
+        if (item && typeof item === 'object') {
+          const id = item.id;
+          if (id) {
+            if (seenIds.has(id)) continue;
+            seenIds.add(id);
           }
         }
-
-        await conn.query("SET FOREIGN_KEY_CHECKS=1");
-        conn.release();
-        res.json({ success: true });
-      } catch (err: any) {
-        await conn.query("SET FOREIGN_KEY_CHECKS=1");
-        conn.release();
-        throw err;
+        uniqueData.push(item);
       }
+
+      await runInQueue(table, async () => {
+        const pool = await getPool();
+        const conn = await pool.getConnection();
+
+        try {
+          await conn.query("SET FOREIGN_KEY_CHECKS=0");
+          
+          let actualTableName = table;
+          if (table === "guruMengampu") actualTableName = "guru_mengampu";
+
+          await conn.query(`TRUNCATE TABLE \`${actualTableName}\``);
+
+          if (uniqueData.length > 0) {
+            // Chunk inserts to avoid query size limits
+            const chunkSize = 50;
+            for (let i = 0; i < uniqueData.length; i += chunkSize) {
+              const chunk = uniqueData.slice(i, i + chunkSize);
+              await db.insert(tableSchema).values(chunk);
+            }
+          }
+
+          await conn.query("SET FOREIGN_KEY_CHECKS=1");
+          conn.release();
+        } catch (err: any) {
+          try {
+            await conn.query("SET FOREIGN_KEY_CHECKS=1");
+          } catch (ignore) {}
+          conn.release();
+          throw err;
+        }
+      });
+
+      res.json({ success: true });
     } catch (error: any) {
       console.error("Sync error:", error);
       res.status(500).json({ success: false, error: error.message });

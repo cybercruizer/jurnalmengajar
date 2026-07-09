@@ -191,7 +191,7 @@ export default function SiswaPanel({
             </p>
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4.5 border border-white/20 text-center">
-            <p className="text-[10px] font-bold tracking-widest text-indigo-200 uppercase">KELAS ANDA</p>
+            <p className="text-xs font-bold tracking-widest text-indigo-200 uppercase">KELAS ANDA</p>
             <p className="text-3xl font-extrabold tracking-tight text-white mt-1 font-display">{studentClass?.nama || 'N/A'}</p>
             <p className="text-[11px] text-indigo-100 font-mono mt-0.5">Automated Smart Lock</p>
           </div>
@@ -302,7 +302,7 @@ export default function SiswaPanel({
                             setJamSelesai(val);
                           }
                         }}
-                        className="block w-full px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white focus:outline-none transition-all cursor-pointer font-bold outline-none"
+                        className="block w-full px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white focus:outline-none transition-all cursor-pointer font-bold outline-none"
                       >
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
                           <option key={h} value={h}>Mulai Jam {h}</option>
@@ -320,7 +320,7 @@ export default function SiswaPanel({
                             alert('Jam selesai tidak boleh mendahului jam mulai!');
                           }
                         }}
-                        className="block w-full px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white focus:outline-none transition-all cursor-pointer font-bold outline-none"
+                        className="block w-full px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white focus:outline-none transition-all cursor-pointer font-bold outline-none"
                       >
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
                           <option key={h} value={h} disabled={h < jamMulai}>Selesai Jam {h}</option>
@@ -341,7 +341,7 @@ export default function SiswaPanel({
                     value={studentClass?.nama || 'Tidak Terbaca'}
                     className="block w-full px-4.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-indigo-900 font-bold text-sm cursor-not-allowed select-none"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Sistem menyematkan kelas otomatis demi kepatuhan data</p>
+                  <p className="text-xs text-slate-400 mt-1">Sistem menyematkan kelas otomatis demi kepatuhan data</p>
                 </div>
               </div>
 
@@ -401,7 +401,7 @@ export default function SiswaPanel({
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-slate-405 mt-1.5">Sistem memetakan guru kurikulum secara otomatis, namun Anda dapat mencentang lebih dari 1 guru bila sedang team-teaching.</p>
+                <p className="text-xs text-slate-405 mt-1.5">Sistem memetakan guru kurikulum secara otomatis, namun Anda dapat mencentang lebih dari 1 guru bila sedang team-teaching.</p>
               </div>
 
               {/* Status Kehadiran Guru */}
@@ -505,7 +505,7 @@ export default function SiswaPanel({
                           <p className="text-xs font-black text-orange-850 mt-1 leading-tight">{getMapelName(jr.mapelId)}</p>
                           <p className="text-xs text-slate-500 mt-1">Oleh: <span className="font-semibold text-slate-700">{getGuruName(jr.guruId)}</span></p>
                         </div>
-                        <span className="text-[10px] bg-slate-200 font-bold text-slate-700 px-2 py-0.5 rounded">
+                        <span className="text-xs bg-slate-200 font-bold text-slate-700 px-2 py-0.5 rounded">
                           Jam {jr.jamKe}
                         </span>
                       </div>
@@ -550,7 +550,7 @@ export default function SiswaPanel({
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-slate-600 min-w-[700px]">
-              <thead className="bg-slate-50 text-slate-700 uppercase text-[10px] tracking-widest font-bold border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-700 uppercase text-xs tracking-widest font-bold border-b border-slate-200">
                 <tr>
                   <th scope="col" className="px-4 py-3">Tanggal / Hari</th>
                   <th scope="col" className="px-4 py-3">Jam Ke</th>
@@ -573,7 +573,7 @@ export default function SiswaPanel({
                     <tr key={jr.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <p className="font-bold text-slate-800">{jr.tanggal}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">{jr.hari}</p>
+                        <p className="text-xs text-slate-400 font-mono">{jr.hari}</p>
                       </td>
                       <td className="px-4 py-3.5">
                         <span className="font-semibold text-xs text-slate-700 bg-slate-105 border border-slate-200 py-1 px-2.5 rounded-md">

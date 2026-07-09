@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { User, Sekolah } from '../types';
 import { 
   LogOut, School, ShieldAlert, BookOpen, UserCheck, Menu, X, 
-  Calendar, Clock, User as UserIcon, ListFilter, AlertCircle, ClipboardList
+  Calendar, Clock, User as UserIcon, ListFilter, AlertCircle, ClipboardList,
+  KeyRound
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -32,6 +33,66 @@ export default function ShapeRexLayout({
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Semua field wajib diisi!');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Konfirmasi password baru tidak cocok!');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setPasswordError('Password baru minimal 4 karakter!');
+      return;
+    }
+
+    setIsSubmittingPassword(true);
+    try {
+      const response = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user.username,
+          currentPassword: oldPassword,
+          newPassword
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setPasswordSuccess('Password Anda berhasil diperbarui!');
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => {
+          setIsChangePasswordOpen(false);
+          setPasswordSuccess('');
+        }, 1500);
+      } else {
+        setPasswordError(result.message || 'Password lama yang Anda masukkan salah.');
+      }
+    } catch (err: any) {
+      setPasswordError('Kesalahan jaringan: ' + err.message);
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -230,6 +291,14 @@ export default function ShapeRexLayout({
             </div>
             
             <button
+              onClick={() => setIsChangePasswordOpen(true)}
+              className="w-full py-2.5 px-4 mb-2 bg-slate-800 hover:bg-slate-750 text-indigo-200 hover:text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2.5 transition-colors cursor-pointer border border-slate-700/50"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Ganti Password</span>
+            </button>
+            
+            <button
               onClick={onLogout}
               id="sidebar-logout"
               className="w-full py-2.5 px-4 bg-rose-950/40 hover:bg-rose-900/45 text-rose-300 font-semibold text-xs rounded-xl flex items-center justify-center gap-2.5 transition-colors cursor-pointer border border-rose-900/40"
@@ -290,6 +359,17 @@ export default function ShapeRexLayout({
 
               <div className="p-4 border-t border-slate-800 bg-slate-950/20">
                 <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsChangePasswordOpen(true);
+                  }}
+                  className="w-full py-2.5 px-4 mb-2 bg-slate-800 hover:bg-slate-750 text-indigo-200 hover:text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer border border-slate-700/50"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Ganti Password</span>
+                </button>
+                
+                <button
                   onClick={onLogout}
                   className="w-full py-2.5 px-4 bg-rose-950/40 hover:bg-rose-900/40 text-rose-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer border border-rose-900/35"
                 >
@@ -336,7 +416,14 @@ export default function ShapeRexLayout({
             <div className="flex items-center gap-4">
               <div className="hidden md:flex flex-col text-right">
                 <span className="text-sm font-extrabold text-slate-900 tracking-tight font-display">{user.name}</span>
-                <span className="text-[10px] text-slate-450 font-mono">ID: {user.username}</span>
+                <span className="text-[10px] text-slate-450 font-mono mb-0.5">ID: {user.username}</span>
+                <button
+                  onClick={() => setIsChangePasswordOpen(true)}
+                  className="text-[9px] text-indigo-600 hover:text-indigo-800 font-extrabold uppercase tracking-wider flex items-center gap-1 justify-end transition-colors cursor-pointer"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>Ganti Password</span>
+                </button>
               </div>
 
               {/* Role Indicator Widget */}
@@ -363,6 +450,109 @@ export default function ShapeRexLayout({
           </footer>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {isChangePasswordOpen && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2 text-slate-800">
+                <KeyRound className="w-5 h-5 text-indigo-650" />
+                <h3 className="font-extrabold text-slate-900 font-display text-sm tracking-tight">Ganti Password Akun</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsChangePasswordOpen(false);
+                  setPasswordError('');
+                  setPasswordSuccess('');
+                  setOldPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+                className="p-1.5 hover:bg-slate-200/60 rounded-lg text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordChange} className="p-6 space-y-4">
+              {passwordError && (
+                <div className="p-3 bg-rose-50 border border-rose-100 text-rose-800 text-xs rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  <span>{passwordSuccess}</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Password Lama</label>
+                <input
+                  type="password"
+                  required
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Masukkan password saat ini"
+                  className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Password Baru</label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min. 4 karakter"
+                  className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Konfirmasi Password Baru</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Ulangi password baru"
+                  className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsChangePasswordOpen(false);
+                    setPasswordError('');
+                    setPasswordSuccess('');
+                    setOldPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all cursor-pointer text-center"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPassword}
+                  className="flex-1 py-2.5 bg-indigo-650 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer text-center"
+                >
+                  {isSubmittingPassword ? 'Memproses...' : 'Simpan Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

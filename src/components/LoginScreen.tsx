@@ -20,7 +20,7 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
     e.preventDefault();
     setErrorString('');
 
-    if (!username.trim() || !password.trim()) {
+    if (!username.trim() || !password) {
       setErrorString('Username dan password harus diisi!');
       return;
     }
@@ -54,7 +54,7 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
             return;
           }
         }
-        setErrorString(result.message || 'Username atau password tidak sesuai!');
+        setErrorString(result.message || 'Username atau password salah!');
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -69,21 +69,6 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
       }
     }
     setLoading(false);
-  };
-
-  const handleQuickLogin = (role: UserRole) => {
-    setActiveRoleTab(role);
-    if (role === 'admin') {
-      setUsername('admin');
-      const adm = users.find(u => u.username === 'admin');
-      setPassword(adm?.password || 'admin12345');
-    } else if (role === 'guru') {
-      setUsername('guru');
-      setPassword('guru123');
-    } else {
-      setUsername('siswa');
-      setPassword('siswa123');
-    }
   };
 
   return (
@@ -141,51 +126,8 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
           <div className="max-w-md mx-auto w-full">
             <h3 className="text-2xl font-bold text-slate-900 tracking-tight font-display">Selamat Datang Ke JurnalKu</h3>
             <p className="text-slate-500 text-sm mt-1">
-              Silakan masuk menggunakan kredensial Anda atau pilih akses cepat di bawah.
+              Silakan masuk menggunakan akun username dan password terdaftar Anda.
             </p>
-
-            {/* Role Select Tabs */}
-            <div className="grid grid-cols-3 gap-2 mt-6 p-1.5 bg-slate-100 rounded-xl">
-              <button
-                type="button"
-                id="btn-role-siswa"
-                onClick={() => handleQuickLogin('siswa')}
-                className={`py-2 px-1 text-xs font-semibold rounded-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 transition-all ${
-                  activeRoleTab === 'siswa'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <UserCheck className="w-4 h-4 text-indigo-500" />
-                <span className="truncate">Ketua Kelas</span>
-              </button>
-              <button
-                type="button"
-                id="btn-role-guru"
-                onClick={() => handleQuickLogin('guru')}
-                className={`py-2 px-1 text-xs font-semibold rounded-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 transition-all ${
-                  activeRoleTab === 'guru'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <BookOpen className="w-4 h-4 text-indigo-505" />
-                <span className="truncate">Guru</span>
-              </button>
-              <button
-                type="button"
-                id="btn-role-admin"
-                onClick={() => handleQuickLogin('admin')}
-                className={`py-2 px-1 text-xs font-semibold rounded-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 transition-all ${
-                  activeRoleTab === 'admin'
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Shield className="w-4 h-4 text-indigo-505" />
-                <span className="truncate">Admin</span>
-              </button>
-            </div>
 
             {/* Error Message */}
             {errorString && (
@@ -197,7 +139,7 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
             {/* Form */}
             <form onSubmit={handleLoginSubmit} className="mt-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-750 uppercase tracking-wider mb-1.5">
                   Username
                 </label>
                 <div className="relative">
@@ -218,7 +160,7 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-750 uppercase tracking-wider">
                     Password
                   </label>
                   <span className="text-xs text-indigo-600 hover:underline cursor-pointer">
@@ -251,44 +193,6 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
                 <span>{loading ? 'Memproses...' : 'Masuk Sekarang'}</span>
               </button>
             </form>
-
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <span className="text-xs font-bold text-slate-550 uppercase tracking-wider block mb-3 text-center font-mono">
-                AKSES DEMO CEPAT (BENTO STYLE)
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  id="demo-siswa"
-                  onClick={() => handleQuickLogin('siswa')}
-                  className="py-2 px-1 text-center bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium cursor-pointer transition-all"
-                >
-                  <p className="font-semibold text-[9px] leading-3 uppercase tracking-wider opacity-60">Ketua</p>
-                  <p className="text-xs font-bold truncate">XI-RPL</p>
-                </button>
-                <button
-                  type="button"
-                  id="demo-guru"
-                  onClick={() => handleQuickLogin('guru')}
-                  className="py-2 px-1 text-center bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium cursor-pointer transition-all"
-                >
-                  <p className="font-semibold text-[9px] leading-3 uppercase tracking-wider opacity-60">Pendidik</p>
-                  <p className="text-xs font-bold truncate">Budi Santoso</p>
-                </button>
-                <button
-                  type="button"
-                  id="demo-admin"
-                  onClick={() => handleQuickLogin('admin')}
-                  className="py-2 px-1 text-center bg-slate-50 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-medium cursor-pointer transition-all"
-                >
-                  <p className="font-semibold text-[9px] leading-3 uppercase tracking-wider opacity-60">Akun</p>
-                  <p className="text-xs font-bold truncate">Administrator</p>
-                </button>
-              </div>
-              <div className="mt-3.5 text-center text-[10px] text-slate-400 font-mono">
-                Keamanan tinggi. Sandi bawaan berakhir dengan akhiran <span className="font-semibold text-slate-600">"123"</span>
-              </div>
-            </div>
 
           </div>
         </div>

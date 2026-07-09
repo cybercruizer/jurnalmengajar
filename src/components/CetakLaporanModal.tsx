@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Jurnal, Kelas, Mapel, Guru, Sekolah, Jurusan, Siswa } from '../types';
 import { X, Printer, HelpCircle, FileText, Check } from 'lucide-react';
 
@@ -118,8 +119,8 @@ export default function CetakLaporanModal({
     year: 'numeric'
   });
 
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-0.5 sm:p-4 z-50 overflow-y-auto no-print">
+  const modalJSX = (
+    <div id="print-modal-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-0.5 sm:p-4 z-50 overflow-y-auto">
       
       {/* Outer Modal Container */}
       <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col my-4 max-h-[95vh] text-slate-800 border border-slate-200">
@@ -131,7 +132,7 @@ export default function CetakLaporanModal({
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-slate-850">
+              <h3 className="text-sm font-extrabold text-slate-855">
                 Prapinjau Cetak Laporan - {type === 'monitoring' ? 'Monitoring KBM Harian' : type === 'harian' ? 'Harian' : type === 'mingguan' ? 'Mingguan' : 'Bulanan'}
               </h3>
               <p className="text-[11px] text-slate-400">Tekan Ctrl+P untuk mencetak dalam format kertas physical / PDF</p>
@@ -162,20 +163,61 @@ export default function CetakLaporanModal({
           {/* STYLING FOR PRINT ONLY AT-RULE */}
           <style dangerouslySetInnerHTML={{__html: `
             @media print {
-              body * {
-                visibility: hidden;
+              html, body {
+                background-color: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
               }
-              #printable-area, #printable-area * {
-                visibility: visible;
+              /* Hide standard React root so it takes zero space */
+              #root {
+                display: none !important;
+              }
+              /* Display print-portal clearly for physical print context */
+              #print-portal {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+              #print-modal-overlay {
+                position: relative !important;
+                background: white !important;
+                backdrop-filter: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                z-index: auto !important;
+              }
+              #print-modal-overlay > div {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                overflow: visible !important;
               }
               #printable-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                position: relative !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 background-color: white !important;
+                display: block !important;
+                overflow: visible !important;
               }
               .no-print {
                 display: none !important;
@@ -406,18 +448,18 @@ export default function CetakLaporanModal({
               </div>
               <div>
                 <p className="font-bold text-slate-900 underline decoration-slate-500 underline-offset-4">{schoolInfo.kepalaSekolah}</p>
-                <p className="text-slate-500 mt-0.5">NIP/Kode. {schoolInfo.nipKepalaSekolah}</p>
+                <p className="text-slate-500 mt-0.5">NBM. {schoolInfo.nbmKepalaSekolah || '-'}</p>
               </div>
             </div>
 
             <div className="space-y-12 text-right">
               <div>
                 <p className="text-slate-500 font-medium">Mungkid, {formattedPrintDate}</p>
-                <p className="font-bold text-slate-800 uppercase">Waka Kurikulum / Guru Piket</p>
+                <p className="font-bold text-slate-800 uppercase">Waka Kurikulum</p>
               </div>
               <div className="pr-4">
-                <p className="font-bold text-slate-900 underline decoration-slate-500 underline-offset-4">......................................................</p>
-                <p className="text-slate-500 mt-0.5">NIP/Kode. .................................................</p>
+                <p className="font-bold text-slate-900 underline decoration-slate-500 underline-offset-4">{schoolInfo.wakaKurikulum || '......................................................'}</p>
+                <p className="text-slate-500 mt-0.5">NBM. {schoolInfo.nbmWakaKurikulum || '.................................................'}</p>
               </div>
             </div>
           </div>
@@ -446,4 +488,7 @@ export default function CetakLaporanModal({
       </div>
     </div>
   );
+
+  const portalNode = typeof document !== 'undefined' ? document.getElementById('print-portal') : null;
+  return portalNode ? createPortal(modalJSX, portalNode) : modalJSX;
 }

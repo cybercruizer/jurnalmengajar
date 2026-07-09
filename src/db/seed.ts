@@ -43,7 +43,9 @@ async function main() {
         npsn: "12345678",
         alamat: "Jl. Pendidikan No. 1",
         kepalaSekolah: "Dr. Budi Santoso, M.Pd.",
-        nipKepalaSekolah: "19700101 200003 1 001",
+        nbmKepalaSekolah: "1098475",
+        wakaKurikulum: "Drs. Heri Susanto, M.Pd.",
+        nbmWakaKurikulum: "1152643",
         website: "https://smkn1contoh.sch.id",
         email: "info@smkn1contoh.sch.id",
       });

@@ -68,7 +68,9 @@ export const sekolah = mysqlTable("sekolah", {
   npsn: varchar("npsn", { length: 50 }).notNull(),
   alamat: text("alamat").notNull(),
   kepalaSekolah: varchar("kepala_sekolah", { length: 100 }).notNull(),
-  nipKepalaSekolah: varchar("nip_kepala_sekolah", { length: 50 }).notNull(),
+  nbmKepalaSekolah: varchar("nbm_kepala_sekolah", { length: 50 }).notNull(),
+  wakaKurikulum: varchar("waka_kurikulum", { length: 100 }).notNull(),
+  nbmWakaKurikulum: varchar("nbm_waka_kurikulum", { length: 50 }).notNull(),
   website: varchar("website", { length: 100 }).notNull(),
   email: varchar("email", { length: 100 }).notNull(),
 });

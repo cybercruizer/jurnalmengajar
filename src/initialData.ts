@@ -5,7 +5,9 @@ export const initialSekolah: Sekolah = {
   npsn: '20338402',
   alamat: 'Jl. Letnan Sulistyo No.1, Mungkid, Magelang, Jawa Tengah',
   kepalaSekolah: 'Drs. H. Sukardiyono, M.Pd.',
-  nipKepalaSekolah: '196711041994031005',
+  nbmKepalaSekolah: '1098475',
+  wakaKurikulum: 'Sriyono, S.Pd., M.T.',
+  nbmWakaKurikulum: '1152643',
   website: 'www.smkmuhmungkid.sch.id',
   email: 'info@smkmuhmungkid.sch.id'
 };
