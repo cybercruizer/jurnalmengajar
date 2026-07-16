@@ -15,6 +15,7 @@ interface SiswaPanelProps {
   onAddJurnal: (jurnal: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => void;
   onDeleteJurnal?: (id: string) => void;
   activeSubTab: string; // 'siswa-input' | 'siswa-riwayat'
+  showToast?: (message: string, type: 'success' | 'error') => void;
 }
 
 export default function SiswaPanel({
@@ -26,11 +27,20 @@ export default function SiswaPanel({
   jurnals,
   onAddJurnal,
   onDeleteJurnal,
-  activeSubTab
+  activeSubTab,
+  showToast
 }: SiswaPanelProps) {
   
   // Find Student's class
   const studentClass = kelas.find(k => k.id === siswa.kelasId);
+
+  const showError = (msg: string) => {
+    if (showToast) {
+      showToast(msg, 'error');
+    } else {
+      alert(msg);
+    }
+  };
 
   // States for input form
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -65,22 +75,18 @@ export default function SiswaPanel({
   useEffect(() => {
     if (!selectedMapelId || !siswa.kelasId) return;
     
-    // Look up guru mengampu mapping
-    const match = guruMengampu.find(
+    // Look up all matching guru mengampu mappings
+    const matches = guruMengampu.filter(
       g => g.mapelId === selectedMapelId && g.kelasId === siswa.kelasId
     );
 
-    if (match) {
-      // Split comma separated ids if any, or wrap single id
-      const ids = match.guruId.split(',').map(id => id.trim()).filter(Boolean);
+    if (matches.length > 0) {
+      const ids = Array.from(new Set(
+        matches.flatMap(match => match.guruId.split(',').map(id => id.trim()).filter(Boolean))
+      ));
       setSelectedGuruIds(ids);
     } else {
-      // If no mapping found, pick the first teacher as fallback or empty
-      if (guru.length > 0) {
-        setSelectedGuruIds([guru[0].id]);
-      } else {
-        setSelectedGuruIds([]);
-      }
+      setSelectedGuruIds([]);
     }
   }, [selectedMapelId, siswa.kelasId, guruMengampu, guru]);
 
@@ -102,15 +108,15 @@ export default function SiswaPanel({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMapelId) {
-      alert('Maaf, Mata Pelajaran harus dipilih.');
+      showError('Maaf, Mata Pelajaran harus dipilih.');
       return;
     }
     if (selectedGuruIds.length === 0) {
-      alert('Maaf, minimal harus memilih 1 guru pengampu.');
+      showError('Maaf, minimal harus memilih 1 guru pengampu.');
       return;
     }
     if (!notes.trim()) {
-      alert('Mohon isi ringkasan materi harian/catatan tugas!');
+      showError('Mohon isi ringkasan materi harian/catatan tugas!');
       return;
     }
 
@@ -317,7 +323,7 @@ export default function SiswaPanel({
                           if (val >= jamMulai) {
                             setJamSelesai(val);
                           } else {
-                            alert('Jam selesai tidak boleh mendahului jam mulai!');
+                            showError('Jam selesai tidak boleh mendahului jam mulai!');
                           }
                         }}
                         className="block w-full px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white focus:outline-none transition-all cursor-pointer font-bold outline-none"
@@ -371,35 +377,54 @@ export default function SiswaPanel({
                   Guru Pengampu (Bisa Pilih Lebih Dari 1 Guru) <span className="text-rose-500 font-extrabold">*</span>
                 </label>
                 <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 max-h-44 overflow-y-auto space-y-2">
-                  {guru.map((g) => {
-                    const isChecked = selectedGuruIds.includes(g.id);
-                    return (
-                      <label 
-                        key={g.id} 
-                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border ${
-                          isChecked 
-                            ? 'bg-indigo-50 border-indigo-200 text-indigo-905 font-semibold' 
-                            : 'bg-white border-slate-150 hover:bg-slate-50 text-slate-600'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
-                            if (isChecked) {
-                              setSelectedGuruIds(selectedGuruIds.filter(id => id !== g.id));
-                            } else {
-                              setSelectedGuruIds([...selectedGuruIds, g.id]);
-                            }
-                          }}
-                          className="w-4 h-4 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer"
-                        />
-                        <span className="text-xs">
-                          {g.nama} {g.kodeGuru ? `(Kode: ${g.kodeGuru})` : ''}
-                        </span>
-                      </label>
-                    );
-                  })}
+                  {(() => {
+                    const allowedGuruIds = Array.from(new Set(
+                      guruMengampu
+                        .filter(gm => gm.mapelId === selectedMapelId && gm.kelasId === siswa.kelasId)
+                        .flatMap(gm => gm.guruId.split(',').map(id => id.trim()).filter(Boolean))
+                    ));
+                    const relevantGurus = allowedGuruIds.length > 0 
+                      ? guru.filter(g => allowedGuruIds.includes(g.id))
+                      : [];
+
+                    if (relevantGurus.length === 0) {
+                      return (
+                        <div className="text-center py-4 text-xs text-slate-400 font-medium bg-white rounded-lg border border-dashed border-slate-200">
+                          Tidak ada guru yang terdaftar mengampu mapel ini di kelas Anda. Hubungi Admin untuk melakukan pemetaan.
+                        </div>
+                      );
+                    }
+
+                    return relevantGurus.map((g) => {
+                      const isChecked = selectedGuruIds.includes(g.id);
+                      return (
+                        <label 
+                          key={g.id} 
+                          className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border ${
+                            isChecked 
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-905 font-semibold' 
+                              : 'bg-white border-slate-150 hover:bg-slate-50 text-slate-600'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedGuruIds(selectedGuruIds.filter(id => id !== g.id));
+                              } else {
+                                setSelectedGuruIds([...selectedGuruIds, g.id]);
+                              }
+                            }}
+                            className="w-4 h-4 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span className="text-xs">
+                            {g.nama} {g.kodeGuru ? `(Kode: ${g.kodeGuru})` : ''}
+                          </span>
+                        </label>
+                      );
+                    });
+                  })()}
                 </div>
                 <p className="text-xs text-slate-405 mt-1.5">Sistem memetakan guru kurikulum secara otomatis, namun Anda dapat mencentang lebih dari 1 guru bila sedang team-teaching.</p>
               </div>

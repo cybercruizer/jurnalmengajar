@@ -30,6 +30,7 @@ interface AdminPanelProps {
   onAddJurnal?: (newEntry: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => void;
   onDeleteJurnal?: (id: string) => void;
   onOpenPrintModal?: (type: 'harian' | 'mingguan' | 'bulanan' | 'monitoring', classId: string | null, filterDate?: string) => void;
+  showToast?: (message: string, type: 'success' | 'error') => void;
 }
 
 export default function AdminPanel({
@@ -45,7 +46,8 @@ export default function AdminPanel({
   jurnals = [],
   onAddJurnal,
   onDeleteJurnal,
-  onOpenPrintModal
+  onOpenPrintModal,
+  showToast
 }: AdminPanelProps) {
 
   // Notification states
@@ -115,7 +117,7 @@ export default function AdminPanel({
   // 7. Guru Mengampu form
   const [ampuGuruId, setAmpuGuruId] = useState('');
   const [ampuMapelId, setAmpuMapelId] = useState('');
-  const [ampuKelasId, setAmpuKelasId] = useState('');
+  const [ampuKelasIds, setAmpuKelasIds] = useState<string[]>([]);
 
   // 8. Admin input jurnal states
   const [showInputJurnalModal, setShowInputJurnalModal] = useState(false);
@@ -176,19 +178,19 @@ export default function AdminPanel({
   const handleAdminSubmitJurnal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputJurnalKelasId) {
-      alert('Silakan pilih kelas.');
+      showError('Silakan pilih kelas.');
       return;
     }
     if (!inputJurnalMapelId) {
-      alert('Silakan pilih mata pelajaran.');
+      showError('Silakan pilih mata pelajaran.');
       return;
     }
     if (inputJurnalGuruIds.length === 0) {
-      alert('Silakan pilih minimal 1 guru pengampu.');
+      showError('Silakan pilih minimal 1 guru pengampu.');
       return;
     }
     if (!inputJurnalCatatan.trim()) {
-      alert('Silakan isi ringkasan materi/catatan KBM.');
+      showError('Silakan isi ringkasan materi/catatan KBM.');
       return;
     }
 
@@ -211,7 +213,7 @@ export default function AdminPanel({
       setShowInputJurnalModal(false);
       showBannerNotice('Jurnal kelas berhasil diinput secara manual oleh Admin!');
     } else {
-      alert('Fungsi tambah jurnal belum tersedia.');
+      showError('Fungsi tambah jurnal belum tersedia.');
     }
   };
 
@@ -219,6 +221,17 @@ export default function AdminPanel({
   const showBannerNotice = (msg: string) => {
     setAdminNotification(msg);
     setTimeout(() => setAdminNotification(''), 4000);
+    if (showToast) {
+      showToast(msg, 'success');
+    }
+  };
+
+  const showError = (msg: string) => {
+    if (showToast) {
+      showToast(msg, 'error');
+    } else {
+      alert(msg);
+    }
   };
 
   // Reset helper
@@ -243,7 +256,7 @@ export default function AdminPanel({
     setGuruKode('');
     setAmpuGuruId(guru[0]?.id || '');
     setAmpuMapelId(mapel[0]?.id || '');
-    setAmpuKelasId(kelas[0]?.id || '');
+    setAmpuKelasIds([]);
   };
 
   // CRUD ACTIONS
@@ -254,7 +267,7 @@ export default function AdminPanel({
     
     // Check duplication
     if (users.some(u => u.username.toLowerCase() === userUsername.toLowerCase())) {
-      alert('Username sudah terpakai!');
+      showError('Username sudah terpakai!');
       return;
     }
 
@@ -273,8 +286,9 @@ export default function AdminPanel({
   };
 
   const handleDeleteUser = (id: string) => {
-    if (id === 'user-admin') {
-      alert('Admin utama sistem tidak boleh dihapus!');
+    const targetUser = users.find(u => u.id === id);
+    if (id === 'user-admin' || (targetUser && targetUser.role === 'admin')) {
+      showError('Akun admin utama atau administrator sistem tidak boleh dihapus!');
       return;
     }
     onUpdateUsers(users.filter(u => u.id !== id));
@@ -378,7 +392,8 @@ export default function AdminPanel({
       
       // Auto-create standard Siswa account if isKetuaKelas is true
       if (siswaIsKetua) {
-        const usernameSiswa = siswaNama.split(' ')[0].toLowerCase() + siswaNis.substring(0, 3);
+        const cleanNis = siswaNis.trim().padStart(5, '0');
+        const usernameSiswa = 'S-' + cleanNis;
         const autoUser: User = {
           id: 'usr-' + Date.now(),
           username: usernameSiswa,
@@ -444,25 +459,42 @@ export default function AdminPanel({
   // 7. GURU MENGAMPU (SUBJECT MAPPINGS)
   const handleAddMengampu = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ampuGuruId || !ampuMapelId || !ampuKelasId) return;
-
-    const duplication = guruMengampu.some(
-      gm => gm.guruId === ampuGuruId && gm.mapelId === ampuMapelId && gm.kelasId === ampuKelasId
-    );
-    if (duplication) {
-      alert('Mapping Guru Mengampu ini sudah terdaftar sebelumnya!');
+    if (!ampuGuruId || !ampuMapelId || ampuKelasIds.length === 0) {
+      showError('Silakan pilih Guru, Mata Pelajaran, dan minimal 1 Kelas.');
       return;
     }
 
-    const newAmpu: GuruMengampu = {
-      id: 'amp-' + Date.now(),
-      guruId: ampuGuruId,
-      mapelId: ampuMapelId,
-      kelasId: ampuKelasId
-    };
+    const newAllocations: GuruMengampu[] = [];
+    const duplicatedClasses: string[] = [];
 
-    onUpdateGuruMengampu([...guruMengampu, newAmpu]);
-    showBannerNotice('Alokasi Guru Mengampu berhasil dipetakan.');
+    ampuKelasIds.forEach((kelasId, index) => {
+      const isDuplicated = guruMengampu.some(
+        gm => gm.guruId === ampuGuruId && gm.mapelId === ampuMapelId && gm.kelasId === kelasId
+      );
+      if (isDuplicated) {
+        const kelasNama = kelas.find(k => k.id === kelasId)?.nama || kelasId;
+        duplicatedClasses.push(kelasNama);
+      } else {
+        newAllocations.push({
+          id: 'amp-' + (Date.now() + index),
+          guruId: ampuGuruId,
+          mapelId: ampuMapelId,
+          kelasId: kelasId
+        });
+      }
+    });
+
+    if (duplicatedClasses.length > 0 && newAllocations.length === 0) {
+      showError(`Mapping Guru Mengampu untuk kelas (${duplicatedClasses.join(', ')}) sudah terdaftar sebelumnya!`);
+      return;
+    }
+
+    onUpdateGuruMengampu([...guruMengampu, ...newAllocations]);
+    if (duplicatedClasses.length > 0) {
+      showBannerNotice(`Alokasi berhasil dipetakan untuk ${newAllocations.length} kelas. Kelas (${duplicatedClasses.join(', ')}) dilewati karena sudah terdaftar.`);
+    } else {
+      showBannerNotice('Alokasi Guru Mengampu berhasil dipetakan.');
+    }
     resetFormValues();
   };
 
@@ -523,7 +555,7 @@ export default function AdminPanel({
   const handleImportMapelCSV = (text: string) => {
     const rows = parseCSVRows(text);
     if (rows.length < 2) {
-      alert('File CSV kosong atau tidak memiliki data.');
+      showError('File CSV kosong atau tidak memiliki data.');
       return;
     }
 
@@ -532,7 +564,7 @@ export default function AdminPanel({
     const namaIdx = headers.indexOf('nama');
 
     if (kodeIdx === -1 || namaIdx === -1) {
-      alert('Format CSV Mapel salah. Pastikan baris baris pertama berisi tajuk "kode" dan "nama".');
+      showError('Format CSV Mapel salah. Pastikan baris baris pertama berisi tajuk "kode" dan "nama".');
       return;
     }
 
@@ -574,7 +606,7 @@ export default function AdminPanel({
   const handleImportGuruCSV = (text: string) => {
     const rows = parseCSVRows(text);
     if (rows.length < 2) {
-      alert('File CSV kosong atau tidak memiliki data.');
+      showError('File CSV kosong atau tidak memiliki data.');
       return;
     }
 
@@ -583,7 +615,7 @@ export default function AdminPanel({
     const namaIdx = headers.indexOf('nama');
 
     if (kodeIdx === -1 || namaIdx === -1) {
-      alert('Format CSV Guru salah. Pastikan baris baris pertama memiliki tajuk "kode" dan "nama".');
+      showError('Format CSV Guru salah. Pastikan baris baris pertama memiliki tajuk "kode" dan "nama".');
       return;
     }
 
@@ -645,7 +677,7 @@ export default function AdminPanel({
   const handleImportSiswaCSV = (text: string) => {
     const rows = parseCSVRows(text);
     if (rows.length < 2) {
-      alert('File CSV kosong atau tidak memiliki data.');
+      showError('File CSV kosong atau tidak memiliki data.');
       return;
     }
 
@@ -656,7 +688,7 @@ export default function AdminPanel({
     const ketuaIdx = headers.findIndex(h => h === 'is_ketua' || h === 'ketua' || h === 'is_ketua_kelas');
 
     if (nisIdx === -1 || namaIdx === -1 || kelasIdx === -1) {
-      alert('Format CSV Siswa salah. Pastikan baris pertama memiliki tajuk "nis", "nama", dan "kelas".');
+      showError('Format CSV Siswa salah. Pastikan baris pertama memiliki tajuk "nis", "nama", dan "kelas".');
       return;
     }
 
@@ -728,8 +760,8 @@ export default function AdminPanel({
       if (isKetua) {
         const userExists = currentUsers.some(u => u.referenceId === siswaId);
         if (!userExists) {
-          const firstWord = nama.split(/[ \t.,]/)[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-          const usernameSiswa = firstWord + nis.substring(Math.max(0, nis.length - 3));
+          const cleanNis = nis.padStart(5, '0');
+          const usernameSiswa = 'S-' + cleanNis;
           const autoUser: User = {
             id: 'usr-s-' + (Date.now() + i),
             username: usernameSiswa,
@@ -753,7 +785,7 @@ export default function AdminPanel({
   const handleImportUsersCSV = (text: string) => {
     const rows = parseCSVRows(text);
     if (rows.length < 2) {
-      alert('File CSV kosong atau tidak memiliki data.');
+      showError('File CSV kosong atau tidak memiliki data.');
       return;
     }
 
@@ -765,7 +797,7 @@ export default function AdminPanel({
     const refIdx = headers.findIndex(h => h === 'referenceid' || h === 'reference_id' || h === 'ref_id');
 
     if (usernameIdx === -1 || nameIdx === -1 || roleIdx === -1) {
-      alert('Format CSV User Akun salah. Pastikan baris pertama memiliki tajuk "username", "name" atau "nama", dan "role".');
+      showError('Format CSV User Akun salah. Pastikan baris pertama memiliki tajuk "username", "name" atau "nama", dan "role".');
       return;
     }
 
@@ -1901,16 +1933,38 @@ KGR-010,Siti Zubaidah, S.Pd.
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
-                  <select
-                    value={ampuKelasId}
-                    onChange={(e) => setAmpuKelasId(e.target.value)}
-                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
-                  >
-                    {kelas.map((k) => (
-                      <option key={k.id} value={k.id}>{k.nama}</option>
-                    ))}
-                  </select>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    Pilih Kelas (Bisa Pilih Lebih Dari 1) <span className="text-rose-500 font-extrabold">*</span>
+                  </label>
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-48 overflow-y-auto space-y-1.5">
+                    {kelas.map((k) => {
+                      const isChecked = ampuKelasIds.includes(k.id);
+                      return (
+                        <label 
+                          key={k.id} 
+                          className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-all border text-xs ${
+                            isChecked 
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold' 
+                              : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-655'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setAmpuKelasIds(ampuKelasIds.filter(id => id !== k.id));
+                              } else {
+                                setAmpuKelasIds([...ampuKelasIds, k.id]);
+                              }
+                            }}
+                            className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span>{k.nama}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <button
@@ -2489,7 +2543,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                                 if (val >= inputJurnalJamMulai) {
                                   setInputJurnalJamSelesai(val);
                                 } else {
-                                  alert('Jam selesai tidak boleh mendahului jam mulai!');
+                                  showError('Jam selesai tidak boleh mendahului jam mulai!');
                                 }
                               }}
                               className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white outline-none font-semibold cursor-pointer"

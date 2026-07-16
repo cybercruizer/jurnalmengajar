@@ -240,9 +240,10 @@ async function startServer() {
         return res.status(400).json({ success: false, message: "Data must be an array" });
       }
 
-      // Deduplicate elements by id to prevent "Duplicate entry for key PRIMARY" in the same batch
+      // Deduplicate elements by id and unique fields to prevent constraint failures in the same batch
       const uniqueData = [];
       const seenIds = new Set();
+      const seenUniques = new Set();
       for (const item of data) {
         if (item && typeof item === 'object') {
           const id = item.id;
@@ -250,40 +251,85 @@ async function startServer() {
             if (seenIds.has(id)) continue;
             seenIds.add(id);
           }
+
+          // Case-insensitive check for other unique columns
+          if (table === "users") {
+            const username = (item.username || item.username_ || "").toString().toLowerCase().trim();
+            if (username) {
+              if (seenUniques.has(`user_username_${username}`)) continue;
+              seenUniques.add(`user_username_${username}`);
+            }
+          } else if (table === "mapel") {
+            const kode = (item.kode || "").toString().toLowerCase().trim();
+            if (kode) {
+              if (seenUniques.has(`mapel_kode_${kode}`)) continue;
+              seenUniques.add(`mapel_kode_${kode}`);
+            }
+          } else if (table === "siswa") {
+            const nis = (item.nis || "").toString().toLowerCase().trim();
+            if (nis) {
+              if (seenUniques.has(`siswa_nis_${nis}`)) continue;
+              seenUniques.add(`siswa_nis_${nis}`);
+            }
+          } else if (table === "guru") {
+            const kodeGuru = (item.kodeGuru || item.kode_guru || "").toString().toLowerCase().trim();
+            if (kodeGuru) {
+              if (seenUniques.has(`guru_kodeguru_${kodeGuru}`)) continue;
+              seenUniques.add(`guru_kodeguru_${kodeGuru}`);
+            }
+          }
         }
         uniqueData.push(item);
       }
 
       await runInQueue(table, async () => {
-        const pool = await getPool();
-        const conn = await pool.getConnection();
+        const { sql } = await import("drizzle-orm");
 
-        try {
-          await conn.query("SET FOREIGN_KEY_CHECKS=0");
-          
+        // If syncing users, fetch existing admin accounts from the database and preserve them
+        if (table === "users") {
+          try {
+            const { eq } = await import("drizzle-orm");
+            const existingAdmins = await db.select().from(tableSchema).where(eq(tableSchema.role, "admin"));
+            for (const admin of existingAdmins) {
+              const exists = uniqueData.some((u: any) => 
+                u.id === admin.id || u.username.toLowerCase() === admin.username.toLowerCase()
+              );
+              if (!exists) {
+                uniqueData.push(admin);
+              }
+            }
+          } catch (adminErr) {
+            console.error("Gagal memproses pengamanan akun admin:", adminErr);
+          }
+        }
+
+        await db.transaction(async (tx: any) => {
+          await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
+
           let actualTableName = table;
           if (table === "guruMengampu") actualTableName = "guru_mengampu";
 
-          await conn.query(`TRUNCATE TABLE \`${actualTableName}\``);
+          await tx.execute(sql.raw(`DELETE FROM \`${actualTableName}\``));
 
           if (uniqueData.length > 0) {
             // Chunk inserts to avoid query size limits
             const chunkSize = 50;
             for (let i = 0; i < uniqueData.length; i += chunkSize) {
-              const chunk = uniqueData.slice(i, i + chunkSize);
-              await db.insert(tableSchema).values(chunk);
+              const chunk = uniqueData.slice(i, i + chunkSize).map((item: any) => {
+                if (table === "jurnal" && item.createdAt) {
+                  return {
+                    ...item,
+                    createdAt: new Date(item.createdAt)
+                  };
+                }
+                return item;
+              });
+              await tx.insert(tableSchema).values(chunk);
             }
           }
 
-          await conn.query("SET FOREIGN_KEY_CHECKS=1");
-          conn.release();
-        } catch (err: any) {
-          try {
-            await conn.query("SET FOREIGN_KEY_CHECKS=1");
-          } catch (ignore) {}
-          conn.release();
-          throw err;
-        }
+          await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
+        });
       });
 
       res.json({ success: true });

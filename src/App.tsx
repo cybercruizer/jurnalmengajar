@@ -14,6 +14,7 @@ import AdminPanel from './components/AdminPanel';
 import GuruPanel from './components/GuruPanel';
 import SiswaPanel from './components/SiswaPanel';
 import CetakLaporanModal from './components/CetakLaporanModal';
+import { Toast, ToastContainer } from './components/ToastNotification';
 
 export default function App() {
   
@@ -37,6 +38,16 @@ export default function App() {
   const [guru, setGuru] = useState<Guru[]>(initialGuru);
   const [guruMengampu, setGuruMengampu] = useState<GuruMengampu[]>(initialGuruMengampu);
   const [jurnals, setJurnals] = useState<Jurnal[]>(initialJurnal);
+
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    const id = 'toast-' + Date.now() + Math.random().toString(36).substr(2, 5);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
 
   useEffect(() => {
     fetch('/api/data')
@@ -173,18 +184,28 @@ export default function App() {
   const handleAddJurnal = (newEntry: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => {
     if (!currentUser) return;
 
-    const fullEntry: Jurnal = {
-      ...newEntry,
-      id: 'jur-j' + Date.now(),
-      diinputOleh: currentUser.referenceId || 'system',
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const fullEntry: Jurnal = {
+        ...newEntry,
+        id: 'jur-j' + Date.now(),
+        diinputOleh: currentUser.referenceId || 'system',
+        createdAt: new Date().toISOString()
+      };
 
-    setJurnals([fullEntry, ...jurnals]);
+      setJurnals([fullEntry, ...jurnals]);
+      showToast('Jurnal mengajar berhasil disimpan & dipublikasikan!', 'success');
+    } catch (err: any) {
+      showToast('Gagal menyimpan jurnal mengajar: ' + err.message, 'error');
+    }
   };
 
   const handleDeleteJurnal = (id: string) => {
-    setJurnals(jurnals.filter(j => j.id !== id));
+    try {
+      setJurnals(jurnals.filter(j => j.id !== id));
+      showToast('Laporan jurnal mengajar berhasil dihapus!', 'success');
+    } catch (err: any) {
+      showToast('Gagal menghapus jurnal mengajar: ' + err.message, 'error');
+    }
   };
 
   // Filter linked objects based on current student accounts
@@ -238,6 +259,7 @@ export default function App() {
               onAddJurnal={handleAddJurnal}
               onDeleteJurnal={handleDeleteJurnal}
               activeSubTab={activeTab} // 'siswa-input' or 'siswa-riwayat'
+              showToast={showToast}
             />
           )}
 
@@ -279,6 +301,7 @@ export default function App() {
               onOpenPrintModal={(type, classId, filterDate) => {
                 setPrintModalParams({ type, classId, filterDate });
               }}
+              showToast={showToast}
             />
           )}
         </ShapeRexLayout>
@@ -300,6 +323,8 @@ export default function App() {
           onClose={() => setPrintModalParams(null)}
         />
       )}
+
+      <ToastContainer toasts={toasts} onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
 
     </div>
   );
