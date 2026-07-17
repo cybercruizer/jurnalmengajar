@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Jurnal, Kelas, Mapel, Guru, Sekolah, Jurusan, Siswa } from '../types';
+import { Jurnal, Kelas, Mapel, Guru, Sekolah, Jurusan, Siswa, User } from '../types';
 import { X, Printer, HelpCircle, FileText, Check } from 'lucide-react';
 
 interface CetakLaporanModalProps {
@@ -15,6 +15,7 @@ interface CetakLaporanModalProps {
   jurnals: Jurnal[];
   schoolInfo: Sekolah;
   onClose: () => void;
+  currentUser?: User | null;
 }
 
 export default function CetakLaporanModal({
@@ -28,22 +29,36 @@ export default function CetakLaporanModal({
   siswa,
   jurnals,
   schoolInfo,
-  onClose
+  onClose,
+  currentUser
 }: CetakLaporanModalProps) {
   
-  const targetClass = classId ? kelas.find(k => k.id === classId) : null;
+  // Track filters inside the modal so that users/admins can dynamically update the print preview!
+  const [selectedClassIdState, setSelectedClassIdState] = useState<string>(classId || 'all');
+  const [selectedGuruIdState, setSelectedGuruIdState] = useState<string>(() => {
+    if (currentUser?.role === 'guru') {
+      return currentUser.referenceId || '';
+    }
+    return 'all';
+  });
+  const [selectedFilterDateState, setSelectedFilterDateState] = useState<string>(filterDate);
+
+  const targetClass = selectedClassIdState !== 'all' ? kelas.find(k => k.id === selectedClassIdState) : null;
   const targetJurusan = targetClass ? jurusan.find(j => j.id === targetClass.jurusanId) : null;
 
   // Filter journals for printing:
-  // 1. By Class (only if not monitoring)
-  let selectedJournals = type === 'monitoring' ? jurnals : jurnals.filter(j => j.kelasId === classId);
+  // 1. By Class (only if not monitoring and class is not 'all')
+  let selectedJournals = jurnals;
+  if (type !== 'monitoring' && selectedClassIdState !== 'all') {
+    selectedJournals = selectedJournals.filter(j => j.kelasId === selectedClassIdState);
+  }
 
-  // 2. By Time Range depending on report type
+  // 2. By Time Range depending on report type and selectedFilterDateState
   let dateTitleStr = '';
-  const dateObj = new Date(filterDate);
+  const dateObj = new Date(selectedFilterDateState);
 
   if (type === 'monitoring') {
-    selectedJournals = selectedJournals.filter(j => j.tanggal === filterDate);
+    selectedJournals = selectedJournals.filter(j => j.tanggal === selectedFilterDateState);
     dateTitleStr = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   } else if (type === 'harian') {
     // Show entries within the same week (7-day window from the filtered date's Monday)
@@ -73,6 +88,16 @@ export default function CetakLaporanModal({
     });
 
     dateTitleStr = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  }
+
+  // 3. Filter by Teacher (guru)
+  // If user is Guru, they are strictly locked to their own referenceId
+  // If user is Admin, they can choose to filter by teacher
+  const activeGuruFilterId = currentUser?.role === 'guru' ? (currentUser.referenceId || '') : selectedGuruIdState;
+  if (activeGuruFilterId !== 'all' && activeGuruFilterId !== '') {
+    selectedJournals = selectedJournals.filter(j => 
+      j.guruId ? j.guruId.split(',').map(id => id.trim()).includes(activeGuruFilterId) : false
+    );
   }
 
   // Sort journals ascending by date and jamKe
@@ -157,6 +182,65 @@ export default function CetakLaporanModal({
           </div>
         </div>
 
+        {/* Interactive Filter Controls Sub-Bar (no-print) */}
+        <div className="p-4 bg-white border-b border-slate-200 flex flex-wrap items-center gap-4 no-print text-xs shrink-0 select-none">
+          
+          {/* Filter Tanggal */}
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <label className="font-bold text-slate-400 uppercase tracking-wider text-[9px] text-left">Tanggal Dasar</label>
+            <input
+              type="date"
+              value={selectedFilterDateState}
+              onChange={(e) => setSelectedFilterDateState(e.target.value)}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-700 focus:outline-none"
+            />
+          </div>
+
+          {/* Filter Kelas */}
+          <div className="flex flex-col gap-1 min-w-[150px]">
+            <label className="font-bold text-slate-400 uppercase tracking-wider text-[9px] text-left">Pilih Kelas</label>
+            <select
+              value={selectedClassIdState}
+              onChange={(e) => setSelectedClassIdState(e.target.value)}
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="all">Semua Kelas (Seluruh Kelas)</option>
+              {kelas.map(k => (
+                <option key={k.id} value={k.id}>{k.nama}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Guru Pengampu */}
+          <div className="flex flex-col gap-1 min-w-[180px]">
+            <label className="font-bold text-slate-400 uppercase tracking-wider text-[9px] text-left">Guru Pengampu</label>
+            {currentUser?.role === 'guru' ? (
+              <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-lg font-bold text-indigo-750 flex items-center gap-1.5 leading-none">
+                <Check className="w-3.5 h-3.5 text-indigo-600" />
+                <span>{guru.find(g => g.id === currentUser.referenceId)?.nama || currentUser.name}</span>
+              </div>
+            ) : (
+              <select
+                value={selectedGuruIdState}
+                onChange={(e) => setSelectedGuruIdState(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="all">Semua Guru Pengampu</option>
+                {guru.map(g => (
+                  <option key={g.id} value={g.id}>{g.nama} {g.kodeGuru ? `(${g.kodeGuru})` : ''}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          
+          {/* Lock/Security Indication */}
+          {currentUser?.role === 'guru' && (
+            <div className="ml-auto p-2 bg-indigo-50 border border-indigo-100/50 rounded-xl text-[10px] font-semibold text-indigo-700">
+              🔒 Laporan Jurnal Otomatis Terkunci Berdasarkan Nama Anda
+            </div>
+          )}
+        </div>
+
         {/* Content Body Scrollable inside modal, fully optimized for printer page */}
         <div className="flex-1 p-6 md:p-10 overflow-y-auto bg-white" id="printable-area">
           
@@ -227,10 +311,19 @@ export default function CetakLaporanModal({
 
           {/* ==================== KOP SURAT (OFFICIAL SCHOOL LETTERHEAD) ==================== */}
           <div className="border-b-4 border-double border-slate-800 pb-4 mb-6 flex items-center gap-5 text-left">
-            <div className="w-20 h-20 bg-orange-100 border border-orange-200 text-orange-600 rounded-full shrink-0 flex items-center justify-center font-black text-2xl font-mono text-center shadow-inner relative">
-              🏫
-              <span className="absolute bottom-0 text-[8px] font-bold bg-slate-800 text-white rounded px-1">SMK</span>
-            </div>
+            {schoolInfo.logoUrl ? (
+              <img 
+                src={schoolInfo.logoUrl} 
+                alt="Logo Sekolah" 
+                className="w-20 h-20 object-contain shrink-0" 
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-20 h-20 bg-orange-100 border border-orange-200 text-orange-600 rounded-full shrink-0 flex items-center justify-center font-black text-2xl font-mono text-center shadow-inner relative">
+                🏫
+                <span className="absolute bottom-0 text-[8px] font-bold bg-slate-800 text-white rounded px-1">SMK</span>
+              </div>
+            )}
             
             <div className="flex-1">
               <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600 leading-none">MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NONFORMAL</h4>
@@ -301,59 +394,76 @@ export default function CetakLaporanModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {kelas.map((k, idx) => {
-                    const matchedJurusan = jurusan.find(j => j.id === k.jurusanId);
-                    const classInDateEntries = jurnals.filter(j => j.kelasId === k.id && j.tanggal === filterDate);
-                    const ketuaKelas = siswa.find(s => s.kelasId === k.id && s.isKetuaKelas);
-                    
-                    return (
-                      <tr key={k.id} className="hover:bg-slate-50/50">
-                        <td className="border border-slate-350 px-3 py-2 text-center font-mono font-bold">{idx + 1}</td>
-                        <td className="border border-slate-350 px-4 py-2 font-bold text-slate-900">{k.nama}</td>
-                        <td className="border border-slate-350 px-4 py-2 font-medium text-slate-600">
-                          {matchedJurusan ? `${matchedJurusan.nama} (${matchedJurusan.singkatan})` : 'Umum'}
-                        </td>
-                        <td className="border border-slate-350 px-4 py-2 font-bold text-slate-850">
-                          {ketuaKelas ? ketuaKelas.nama : '(Belum ditunjuk)'}
-                          {ketuaKelas && <p className="text-[9.5px] text-slate-400 font-mono font-normal">NIS: {ketuaKelas.nis}</p>}
-                        </td>
-                        <td className="border border-slate-350 px-3 py-2 text-center font-extrabold text-[10px]">
-                          <span className={`px-2.5 py-0.5 rounded font-bold ${
-                            classInDateEntries.length > 0 
-                              ? 'text-emerald-850 bg-emerald-50 border border-emerald-200' 
-                              : 'text-rose-850 bg-rose-50 border border-rose-200'
-                          }`}>
-                            {classInDateEntries.length > 0 
-                              ? `TERISI (${classInDateEntries.length} SESI)` 
-                              : 'BELUM MENGISI'}
-                          </span>
-                        </td>
-                        <td className="border border-slate-350 px-4 py-2.5 text-left text-slate-650 leading-relaxed max-w-xs">
-                          {classInDateEntries.length === 0 ? (
-                            <span className="text-rose-600 font-semibold italic text-[10.5px]">Menunggu laporan ketua kelas</span>
-                          ) : (
-                            <div className="space-y-1 font-medium">
-                              {classInDateEntries.map((j) => {
-                                const m = mapel.find(map => map.id === j.mapelId);
-                                return (
-                                  <div key={j.id} className="text-[10px] leading-tight">
-                                    <span className="font-bold text-slate-700">Jam {j.jamKe}:</span> {m ? m.nama : 'Mapel'} ({j.statusKehadiran.toUpperCase()})
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {kelas
+                    .filter(k => selectedClassIdState === 'all' ? true : k.id === selectedClassIdState)
+                    .map((k, idx) => {
+                      const matchedJurusan = jurusan.find(j => j.id === k.jurusanId);
+                      let classInDateEntries = jurnals.filter(j => j.kelasId === k.id && j.tanggal === selectedFilterDateState);
+                      if (activeGuruFilterId !== 'all' && activeGuruFilterId !== '') {
+                        classInDateEntries = classInDateEntries.filter(j => 
+                          j.guruId ? j.guruId.split(',').map(id => id.trim()).includes(activeGuruFilterId) : false
+                        );
+                      }
+                      const ketuaKelas = siswa.find(s => s.kelasId === k.id && s.isKetuaKelas);
+                      
+                      return (
+                        <tr key={k.id} className="hover:bg-slate-50/50">
+                          <td className="border border-slate-350 px-3 py-2 text-center font-mono font-bold">{idx + 1}</td>
+                          <td className="border border-slate-350 px-4 py-2 font-bold text-slate-900">{k.nama}</td>
+                          <td className="border border-slate-350 px-4 py-2 font-medium text-slate-600">
+                            {matchedJurusan ? `${matchedJurusan.nama} (${matchedJurusan.singkatan})` : 'Umum'}
+                          </td>
+                          <td className="border border-slate-350 px-4 py-2 font-bold text-slate-850">
+                            {ketuaKelas ? ketuaKelas.nama : '(Belum ditunjuk)'}
+                            {ketuaKelas && <p className="text-[9.5px] text-slate-400 font-mono font-normal">NIS: {ketuaKelas.nis}</p>}
+                          </td>
+                          <td className="border border-slate-350 px-3 py-2 text-center font-extrabold text-[10px]">
+                            <span className={`px-2.5 py-0.5 rounded font-bold ${
+                              classInDateEntries.length > 0 
+                                ? 'text-emerald-850 bg-emerald-50 border border-emerald-200' 
+                                : 'text-rose-850 bg-rose-50 border border-rose-200'
+                            }`}>
+                              {classInDateEntries.length > 0 
+                                ? `TERISI (${classInDateEntries.length} SESI)` 
+                                : 'BELUM MENGISI'}
+                            </span>
+                          </td>
+                          <td className="border border-slate-350 px-4 py-2.5 text-left text-slate-650 leading-relaxed max-w-xs">
+                            {classInDateEntries.length === 0 ? (
+                              <span className="text-rose-600 font-semibold italic text-[10.5px]">Menunggu laporan ketua kelas</span>
+                            ) : (
+                              <div className="space-y-1 font-medium">
+                                {classInDateEntries.map((j) => {
+                                  const m = mapel.find(map => map.id === j.mapelId);
+                                  return (
+                                    <div key={j.id} className="text-[10px] leading-tight">
+                                      <span className="font-bold text-slate-700">Jam {j.jamKe}:</span> {m ? m.nama : 'Mapel'} ({j.statusKehadiran.toUpperCase()})
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
 
               {/* Monitoring statistics box */}
               {(() => {
-                const totalKelasCount = kelas.length;
-                const filledKelasCount = kelas.filter(k => jurnals.some(j => j.kelasId === k.id && j.tanggal === filterDate)).length;
+                const filteredKelas = kelas.filter(k => selectedClassIdState === 'all' ? true : k.id === selectedClassIdState);
+                const totalKelasCount = filteredKelas.length;
+                const filledKelasCount = filteredKelas.filter(k => 
+                  jurnals.some(j => {
+                    const isDateMatch = j.kelasId === k.id && j.tanggal === selectedFilterDateState;
+                    if (!isDateMatch) return false;
+                    if (activeGuruFilterId !== 'all' && activeGuruFilterId !== '') {
+                      return j.guruId ? j.guruId.split(',').map(id => id.trim()).includes(activeGuruFilterId) : false;
+                    }
+                    return true;
+                  })
+                ).length;
                 const notFilledKelasCount = totalKelasCount - filledKelasCount;
                 const score = totalKelasCount > 0 ? Math.round((filledKelasCount / totalKelasCount) * 100) : 0;
                 

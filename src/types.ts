@@ -72,4 +72,5 @@ export interface Sekolah {
   nbmWakaKurikulum: string;
   website: string;
   email: string;
+  logoUrl?: string;
 }

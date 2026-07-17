@@ -226,6 +226,32 @@ export default function AdminPanel({
     }
   };
 
+  const [logoDragging, setLogoDragging] = useState(false);
+
+  const handleLogoFile = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showBannerNotice('Error: File harus berupa gambar (PNG, JPG, JPEG, SVG)!');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      showBannerNotice('Error: Ukuran file gambar maksimal 2MB!');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        onUpdateSchoolInfo({
+          ...schoolInfo,
+          logoUrl: e.target.result
+        });
+        showBannerNotice('Logo sekolah berhasil diperbarui!');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const showError = (msg: string) => {
     if (showToast) {
       showToast(msg, 'error');
@@ -435,7 +461,7 @@ export default function AdminPanel({
       onUpdateGuru([...guru, newGur]);
       
       // Auto-create Guru account
-      const usernameGuru = guruNama.split(' ')[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+      const usernameGuru = guruKode.trim();
       const autoUser: User = {
         id: 'usr-' + Date.now(),
         username: usernameGuru,
@@ -654,9 +680,7 @@ export default function AdminPanel({
         addedCount++;
         
         // Auto-create Guru login credentials
-        const firstWord = nama.split(/[ \t.,]/)[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
-        const randomNum = Math.floor(10 + Math.random() * 90);
-        const usernameGuru = firstWord + randomNum;
+        const usernameGuru = kode.trim();
         const autoUser: User = {
           id: 'usr-g-' + (Date.now() + i),
           username: usernameGuru,
@@ -2821,6 +2845,86 @@ KGR-010,Siti Zubaidah, S.Pd.
             </h3>
 
             <form onSubmit={handleUpdateSchool} className="space-y-5 max-w-2xl text-left">
+              {/* UPLOAD LOGO SEKOLAH */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-dashed border-slate-250 flex flex-col md:flex-row items-center gap-5">
+                <div className="shrink-0">
+                  {schoolInfo.logoUrl ? (
+                    <div className="relative group w-24 h-24 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex items-center justify-center">
+                      <img 
+                        src={schoolInfo.logoUrl} 
+                        alt="Preview Logo" 
+                        className="w-full h-full object-contain p-2"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateSchoolInfo({ ...schoolInfo, logoUrl: undefined });
+                          showBannerNotice('Logo sekolah dihapus.');
+                        }}
+                        className="absolute inset-0 bg-black/55 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Hapus</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 bg-orange-50 border border-orange-200 text-orange-500 rounded-xl flex flex-col items-center justify-center font-bold text-3xl shadow-inner relative">
+                      🏫
+                      <span className="text-[9px] mt-1 text-slate-500 font-bold uppercase tracking-wider bg-orange-100 px-1.5 py-0.5 rounded-full">Kop Logo</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 w-full">
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Logo Resmi Sekolah (Tampil di Kop Surat)
+                  </label>
+                  <p className="text-xs text-slate-400 mb-3 leading-relaxed">
+                    Unggah lambang sekolah resmi dalam format PNG/JPG/SVG. File ini akan otomatis ditumpangkan sebagai lambang resmi di Kop Surat laporan jurnal harian, mingguan, dan bulanan.
+                  </p>
+
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setLogoDragging(true);
+                    }}
+                    onDragLeave={() => setLogoDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setLogoDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleLogoFile(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    onClick={() => document.getElementById('school-logo-input')?.click()}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                      logoDragging 
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
+                        : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-100/50 text-slate-500'
+                    }`}
+                  >
+                    <Upload className="w-5 h-5 mx-auto mb-1.5 text-slate-400 group-hover:text-indigo-500" />
+                    <p className="text-xs font-semibold">
+                      {logoDragging ? 'Lepaskan file di sini' : 'Tarik & letakkan logo di sini, atau klik untuk memilih'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Format: PNG, JPG, SVG up to 2MB</p>
+                  </div>
+
+                  <input
+                    id="school-logo-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleLogoFile(e.target.files[0]);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5">Nama Institusi Sekolah</label>

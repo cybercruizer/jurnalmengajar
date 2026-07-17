@@ -321,6 +321,7 @@ export default function App() {
           jurnals={jurnals}
           schoolInfo={schoolInfo}
           onClose={() => setPrintModalParams(null)}
+          currentUser={currentUser}
         />
       )}
 

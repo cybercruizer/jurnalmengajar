@@ -120,14 +120,14 @@ export default function GuruPanel({
           
           <div className="flex gap-2">
             <button
-              onClick={() => onPrintPreview('harian', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
+              onClick={() => onPrintPreview('harian', selectedClassId, filterDate)}
               className="py-3 px-4 bg-white hover:bg-slate-50 text-indigo-700 font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak Harian</span>
             </button>
             <button
-              onClick={() => onPrintPreview('mingguan', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
+              onClick={() => onPrintPreview('mingguan', selectedClassId, filterDate)}
               className="py-3 px-4 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
             >
               <Printer className="w-4 h-4" />
@@ -205,8 +205,9 @@ export default function GuruPanel({
                     <select
                       value={selectedClassId}
                       onChange={(e) => setSelectedClassId(e.target.value)}
-                      className="block w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none"
+                      className="block w-full text-sm font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none cursor-pointer"
                     >
+                      <option value="all">Semua Kelas</option>
                       {kelas.map((k) => (
                         <option key={k.id} value={k.id}>{k.nama}</option>
                       ))}
@@ -226,21 +227,21 @@ export default function GuruPanel({
 
               <div className="grid grid-cols-3 gap-2 mt-6">
                 <button
-                  onClick={() => onPrintPreview('harian', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
+                  onClick={() => onPrintPreview('harian', selectedClassId, filterDate)}
                   className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-sm cursor-pointer transition-all flex items-center justify-center gap-1 border border-slate-250"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Cetak Harian</span>
                 </button>
                 <button
-                  onClick={() => onPrintPreview('mingguan', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
+                  onClick={() => onPrintPreview('mingguan', selectedClassId, filterDate)}
                   className="py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-sm cursor-pointer transition-all flex items-center justify-center gap-1 border border-rose-200/50"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Mingguan</span>
                 </button>
                 <button
-                  onClick={() => onPrintPreview('bulanan', selectedClassId === 'all' ? kelas[0]?.id : selectedClassId, filterDate)}
+                  onClick={() => onPrintPreview('bulanan', selectedClassId, filterDate)}
                   className="py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-bold text-sm cursor-pointer transition-all flex items-center justify-center gap-1 border border-orange-200/50"
                 >
                   <Printer className="w-3.5 h-3.5" />
