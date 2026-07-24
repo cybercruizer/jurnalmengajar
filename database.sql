@@ -78,5 +78,6 @@ CREATE TABLE `sekolah` (
   `waka_kurikulum` varchar(100) NOT NULL,
   `nbm_waka_kurikulum` varchar(50) NOT NULL,
   `website` varchar(100) NOT NULL,
-  `email` varchar(100) NOT NULL
+  `email` varchar(100) NOT NULL,
+  `logo_url` text
 );

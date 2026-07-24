@@ -71,13 +71,13 @@ export default function SiswaPanel({
     }
   }, [mapel, selectedMapelId]);
 
-  // Auto-resolve Assigned Teacher based on selected Mapel and Student's class
+  // Auto-resolve Assigned Teacher based on selected Mapel (all teachers who teach this subject)
   useEffect(() => {
-    if (!selectedMapelId || !siswa.kelasId) return;
+    if (!selectedMapelId) return;
     
-    // Look up all matching guru mengampu mappings
+    // Look up all matching guru mengampu mappings for this subject
     const matches = guruMengampu.filter(
-      g => g.mapelId === selectedMapelId && g.kelasId === siswa.kelasId
+      g => g.mapelId === selectedMapelId
     );
 
     if (matches.length > 0) {
@@ -88,7 +88,7 @@ export default function SiswaPanel({
     } else {
       setSelectedGuruIds([]);
     }
-  }, [selectedMapelId, siswa.kelasId, guruMengampu, guru]);
+  }, [selectedMapelId, guruMengampu, guru]);
 
   // Filter journals logged specifically for this student's class
   const myClassJournals = jurnals
@@ -380,17 +380,17 @@ export default function SiswaPanel({
                   {(() => {
                     const allowedGuruIds = Array.from(new Set(
                       guruMengampu
-                        .filter(gm => gm.mapelId === selectedMapelId && gm.kelasId === siswa.kelasId)
+                        .filter(gm => gm.mapelId === selectedMapelId)
                         .flatMap(gm => gm.guruId.split(',').map(id => id.trim()).filter(Boolean))
                     ));
                     const relevantGurus = allowedGuruIds.length > 0 
                       ? guru.filter(g => allowedGuruIds.includes(g.id))
-                      : [];
+                      : guru;
 
                     if (relevantGurus.length === 0) {
                       return (
                         <div className="text-center py-4 text-xs text-slate-400 font-medium bg-white rounded-lg border border-dashed border-slate-200">
-                          Tidak ada guru yang terdaftar mengampu mapel ini di kelas Anda. Hubungi Admin untuk melakukan pemetaan.
+                          Tidak ada guru yang terdaftar mengampu mapel ini. Hubungi Admin untuk melakukan pemetaan.
                         </div>
                       );
                     }

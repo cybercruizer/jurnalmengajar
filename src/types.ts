@@ -63,6 +63,7 @@ export interface Jurnal {
 }
 
 export interface Sekolah {
+  id?: string;
   nama: string;
   npsn: string;
   alamat: string;

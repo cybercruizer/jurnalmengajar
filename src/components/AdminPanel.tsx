@@ -143,19 +143,21 @@ export default function AdminPanel({
     }
   }, [inputJurnalDate]);
 
-  // Smart suggestion for teacher mapping based on selected mapel and kelas
+  // Smart suggestion for teacher mapping based on selected mapel (all teachers who teach this subject)
   React.useEffect(() => {
-    if (!inputJurnalMapelId || !inputJurnalKelasId) return;
-    const match = guruMengampu.find(
-      gm => gm.mapelId === inputJurnalMapelId && gm.kelasId === inputJurnalKelasId
+    if (!inputJurnalMapelId) return;
+    const matches = guruMengampu.filter(
+      gm => gm.mapelId === inputJurnalMapelId
     );
-    if (match) {
-      const ids = match.guruId.split(',').map(id => id.trim()).filter(Boolean);
+    if (matches.length > 0) {
+      const ids = Array.from(new Set(
+        matches.flatMap(gm => gm.guruId.split(',').map(id => id.trim()).filter(Boolean))
+      ));
       setInputJurnalGuruIds(ids);
     } else {
       setInputJurnalGuruIds([]);
     }
-  }, [inputJurnalMapelId, inputJurnalKelasId, guruMengampu]);
+  }, [inputJurnalMapelId, guruMengampu]);
 
   const handleOpenInputJurnal = (preferredKelasId: string = '') => {
     setInputJurnalDate(rekapDate);

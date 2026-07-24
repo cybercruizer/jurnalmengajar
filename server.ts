@@ -78,6 +78,9 @@ async function startServer() {
       process.env.DB_PASSWORD = password;
       process.env.DB_NAME = name;
 
+      const { resetDbConnection } = await import("./src/db/index.js");
+      resetDbConnection();
+
       res.json({ success: true, message: "Konfigurasi database berhasil disimpan ke .env" });
     } catch (error: any) {
       console.error("Gagal menyimpan .env:", error);
@@ -316,13 +319,17 @@ async function startServer() {
             const chunkSize = 50;
             for (let i = 0; i < uniqueData.length; i += chunkSize) {
               const chunk = uniqueData.slice(i, i + chunkSize).map((item: any) => {
-                if (table === "jurnal" && item.createdAt) {
+                let processedItem = item;
+                if (table === "sekolah" && !processedItem.id) {
+                  processedItem = { ...processedItem, id: "sek-1" };
+                }
+                if (table === "jurnal" && processedItem.createdAt) {
                   return {
-                    ...item,
-                    createdAt: new Date(item.createdAt)
+                    ...processedItem,
+                    createdAt: new Date(processedItem.createdAt)
                   };
                 }
-                return item;
+                return processedItem;
               });
               await tx.insert(tableSchema).values(chunk);
             }

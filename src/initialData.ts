@@ -1,6 +1,7 @@
 import { Sekolah, Jurusan, Mapel, Kelas, Siswa, Guru, GuruMengampu, Jurnal, User } from './types';
 
 export const initialSekolah: Sekolah = {
+  id: 'sek-1',
   nama: 'SMK Muhammadiyah Mungkid',
   npsn: '20338402',
   alamat: 'Jl. Letnan Sulistyo No.1, Mungkid, Magelang, Jawa Tengah',
