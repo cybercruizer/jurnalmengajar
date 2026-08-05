@@ -64,16 +64,12 @@ export default function SiswaPanel({
     setSelectedDay(dayName);
   }, [selectedDate]);
 
-  // Pre-fill first subject and try to find matching teacher
-  useEffect(() => {
-    if (mapel.length > 0 && !selectedMapelId) {
-      setSelectedMapelId(mapel[0].id);
-    }
-  }, [mapel, selectedMapelId]);
-
   // Auto-resolve Assigned Teacher based on selected Mapel (all teachers who teach this subject)
   useEffect(() => {
-    if (!selectedMapelId) return;
+    if (!selectedMapelId) {
+      setSelectedGuruIds([]);
+      return;
+    }
     
     // Look up all matching guru mengampu mappings for this subject
     const matches = guruMengampu.filter(
@@ -373,11 +369,24 @@ export default function SiswaPanel({
 
               {/* Guru Pengampu - Multi-select */}
               <div>
-                <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5">
-                  Guru Pengampu (Bisa Pilih Lebih Dari 1 Guru) <span className="text-rose-500 font-extrabold">*</span>
+                <label className="block text-xs font-bold text-slate-650 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                  <span>Guru Pengampu (Bisa Pilih Lebih Dari 1 Guru) <span className="text-rose-500 font-extrabold">*</span></span>
+                  {selectedGuruIds.length > 0 && (
+                    <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">
+                      {selectedGuruIds.length} Guru Terpilih
+                    </span>
+                  )}
                 </label>
                 <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50 max-h-44 overflow-y-auto space-y-2">
                   {(() => {
+                    if (!selectedMapelId) {
+                      return (
+                        <div className="text-center py-4 text-xs text-slate-400 font-medium bg-white rounded-lg border border-dashed border-slate-200">
+                          -- Silakan pilih mata pelajaran terlebih dahulu --
+                        </div>
+                      );
+                    }
+
                     const allowedGuruIds = Array.from(new Set(
                       guruMengampu
                         .filter(gm => gm.mapelId === selectedMapelId)
@@ -389,7 +398,7 @@ export default function SiswaPanel({
 
                     if (relevantGurus.length === 0) {
                       return (
-                        <div className="text-center py-4 text-xs text-slate-400 font-medium bg-white rounded-lg border border-dashed border-slate-200">
+                        <div className="text-center py-4 text-xs text-amber-600 font-medium bg-amber-50/50 rounded-lg border border-dashed border-amber-200">
                           Tidak ada guru yang terdaftar mengampu mapel ini. Hubungi Admin untuk melakukan pemetaan.
                         </div>
                       );
@@ -426,7 +435,7 @@ export default function SiswaPanel({
                     });
                   })()}
                 </div>
-                <p className="text-xs text-slate-405 mt-1.5">Sistem memetakan guru kurikulum secara otomatis, namun Anda dapat mencentang lebih dari 1 guru bila sedang team-teaching.</p>
+                <p className="text-xs text-slate-405 mt-1.5">Sistem memetakan guru pengampu secara otomatis sesuai mata pelajaran yang dipilih.</p>
               </div>
 
               {/* Status Kehadiran Guru */}

@@ -63,22 +63,14 @@ export const initialSiswa: Siswa[] = [
 ];
 
 export const initialGuruMengampu: GuruMengampu[] = [
-  // Budi Santoso teaches Web to XI RPL 1 & 2
-  { id: 'amp-1', guruId: 'gur-1', mapelId: 'mapel-1', kelasId: 'kls-1' },
-  { id: 'amp-2', guruId: 'gur-1', mapelId: 'mapel-1', kelasId: 'kls-2' },
-  
-  // Siti Aminah teaches Basis Data to XI RPL 1
-  { id: 'amp-3', guruId: 'gur-2', mapelId: 'mapel-2', kelasId: 'kls-1' },
-  
-  // Eko Prasetyo teaches ASJ to XI TKJ 1 & 2
-  { id: 'amp-4', guruId: 'gur-3', mapelId: 'mapel-3', kelasId: 'kls-3' },
-  { id: 'amp-5', guruId: 'gur-3', mapelId: 'mapel-3', kelasId: 'kls-4' },
-  
-  // Rini Astuti teaches Bahasa Indonesia to all classes
-  { id: 'amp-6', guruId: 'gur-4', mapelId: 'mapel-5', kelasId: 'kls-1' },
-  { id: 'amp-7', guruId: 'gur-4', mapelId: 'mapel-5', kelasId: 'kls-2' },
-  { id: 'amp-8', guruId: 'gur-4', mapelId: 'mapel-5', kelasId: 'kls-3' },
-  { id: 'amp-9', guruId: 'gur-4', mapelId: 'mapel-5', kelasId: 'kls-4' }
+  // Budi Santoso teaches Web
+  { id: 'amp-1', guruId: 'gur-1', mapelId: 'mapel-1', kelasId: '' },
+  // Siti Aminah teaches Basis Data
+  { id: 'amp-2', guruId: 'gur-2', mapelId: 'mapel-2', kelasId: '' },
+  // Eko Prasetyo teaches ASJ
+  { id: 'amp-3', guruId: 'gur-3', mapelId: 'mapel-3', kelasId: '' },
+  // Rini Astuti teaches Bahasa Indonesia
+  { id: 'amp-4', guruId: 'gur-4', mapelId: 'mapel-5', kelasId: '' }
 ];
 
 export const initialJurnal: Jurnal[] = [

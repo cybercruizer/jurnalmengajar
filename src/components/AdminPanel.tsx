@@ -311,17 +311,17 @@ export default function AdminPanel({
     setJurusanNama('');
     setJurusanSingkatan('');
     setKelasNama('');
-    setKelasJurusanId(jurusan[0]?.id || '');
+    setKelasJurusanId('');
     setMapelKode('');
     setMapelNama('');
     setSiswaNama('');
     setSiswaNis('');
-    setSiswaKelasId(kelas[0]?.id || '');
+    setSiswaKelasId('');
     setSiswaIsKetua(false);
     setGuruNama('');
     setGuruKode('');
-    setAmpuGuruId(guru[0]?.id || '');
-    setAmpuMapelId(mapel[0]?.id || '');
+    setAmpuGuruId('');
+    setAmpuMapelId('');
     setAmpuKelasIds([]);
   };
 
@@ -525,42 +525,32 @@ export default function AdminPanel({
   // 7. GURU MENGAMPU (SUBJECT MAPPINGS)
   const handleAddMengampu = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ampuGuruId || !ampuMapelId || ampuKelasIds.length === 0) {
-      showError('Silakan pilih Guru, Mata Pelajaran, dan minimal 1 Kelas.');
+    if (!ampuGuruId) {
+      showError('Silakan pilih Guru Pengajar terlebih dahulu.');
+      return;
+    }
+    if (!ampuMapelId) {
+      showError('Silakan pilih Mata Pelajaran terlebih dahulu.');
       return;
     }
 
-    const newAllocations: GuruMengampu[] = [];
-    const duplicatedClasses: string[] = [];
-
-    ampuKelasIds.forEach((kelasId, index) => {
-      const isDuplicated = guruMengampu.some(
-        gm => gm.guruId === ampuGuruId && gm.mapelId === ampuMapelId && gm.kelasId === kelasId
-      );
-      if (isDuplicated) {
-        const kelasNama = kelas.find(k => k.id === kelasId)?.nama || kelasId;
-        duplicatedClasses.push(kelasNama);
-      } else {
-        newAllocations.push({
-          id: 'amp-' + (Date.now() + index),
-          guruId: ampuGuruId,
-          mapelId: ampuMapelId,
-          kelasId: kelasId
-        });
-      }
-    });
-
-    if (duplicatedClasses.length > 0 && newAllocations.length === 0) {
-      showError(`Mapping Guru Mengampu untuk kelas (${duplicatedClasses.join(', ')}) sudah terdaftar sebelumnya!`);
+    const isDuplicated = guruMengampu.some(
+      gm => gm.guruId === ampuGuruId && gm.mapelId === ampuMapelId
+    );
+    if (isDuplicated) {
+      showError('Mapping Guru Mengampu untuk mata pelajaran ini sudah terdaftar sebelumnya!');
       return;
     }
 
-    onUpdateGuruMengampu([...guruMengampu, ...newAllocations]);
-    if (duplicatedClasses.length > 0) {
-      showBannerNotice(`Alokasi berhasil dipetakan untuk ${newAllocations.length} kelas. Kelas (${duplicatedClasses.join(', ')}) dilewati karena sudah terdaftar.`);
-    } else {
-      showBannerNotice('Alokasi Guru Mengampu berhasil dipetakan.');
-    }
+    const newAllocation: GuruMengampu = {
+      id: 'amp-' + Date.now(),
+      guruId: ampuGuruId,
+      mapelId: ampuMapelId,
+      kelasId: ''
+    };
+
+    onUpdateGuruMengampu([...guruMengampu, newAllocation]);
+    showBannerNotice('Alokasi Guru Mengampu berhasil dipetakan.');
     resetFormValues();
   };
 
@@ -1977,8 +1967,9 @@ KGR-010,Siti Zubaidah, S.Pd.
                     onChange={(e) => setAmpuGuruId(e.target.value)}
                     className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
+                    <option value="">-- pilih guru --</option>
                     {guru.map((g) => (
-                      <option key={g.id} value={g.id}>{g.nama}</option>
+                      <option key={g.id} value={g.id}>{g.nama} {g.kodeGuru ? `(${g.kodeGuru})` : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -1990,60 +1981,26 @@ KGR-010,Siti Zubaidah, S.Pd.
                     onChange={(e) => setAmpuMapelId(e.target.value)}
                     className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
+                    <option value="">-- pilih mapel --</option>
                     {mapel.map((m) => (
                       <option key={m.id} value={m.id}>[{m.kode}] - {m.nama}</option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                    Pilih Kelas (Bisa Pilih Lebih Dari 1) <span className="text-rose-500 font-extrabold">*</span>
-                  </label>
-                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-48 overflow-y-auto space-y-1.5">
-                    {kelas.map((k) => {
-                      const isChecked = ampuKelasIds.includes(k.id);
-                      return (
-                        <label 
-                          key={k.id} 
-                          className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-all border text-xs ${
-                            isChecked 
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold' 
-                              : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-655'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {
-                              if (isChecked) {
-                                setAmpuKelasIds(ampuKelasIds.filter(id => id !== k.id));
-                              } else {
-                                setAmpuKelasIds([...ampuKelasIds, k.id]);
-                              }
-                            }}
-                            className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer"
-                          />
-                          <span>{k.nama}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <button
                   type="submit"
-                  className="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Mankan Alokasi Mengampu</span>
+                  <span>Simpan Alokasi Mengampu</span>
                 </button>
               </form>
             </div>
 
             <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-210 shadow-sm">
               <h3 className="text-sm font-bold text-slate-800 tracking-wider uppercase mb-5 flex items-center gap-1.5 border-b border-slate-100 pb-3">
-                <BookOpen className="w-4 h-4 text-orange-550 text-orange-600" />
+                <BookOpen className="w-4 h-4 text-orange-600" />
                 Alokasi Mengampu Mata Pelajaran Terdata
               </h3>
               
@@ -2051,9 +2008,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                 <table className="w-full text-xs text-left text-slate-650">
                   <thead className="bg-slate-50 text-slate-700 uppercase text-[11px] font-bold">
                     <tr>
-                      <th scope="col" className="px-3 py-2.5 col-span-3">Pendidik</th>
-                      <th scope="col" className="px-3 py-2.5">Matapelajaran</th>
-                      <th scope="col" className="px-3 py-2.5 text-center">Kelas</th>
+                      <th scope="col" className="px-3 py-2.5">Pendidik</th>
+                      <th scope="col" className="px-3 py-2.5">Mata Pelajaran</th>
                       <th scope="col" className="px-3 py-2.5 text-right">Delete</th>
                     </tr>
                   </thead>
@@ -2061,22 +2017,17 @@ KGR-010,Siti Zubaidah, S.Pd.
                     {guruMengampu.map((gm) => {
                       const matchedGuru = guru.find(g => g.id === gm.guruId);
                       const matchedMapel = mapel.find(m => m.id === gm.mapelId);
-                      const matchedKelas = kelas.find(k => k.id === gm.kelasId);
                       return (
                         <tr key={gm.id} className="hover:bg-slate-50/50">
                           <td className="px-3 py-3 font-semibold text-slate-800">{matchedGuru ? matchedGuru.nama : 'Guru dihapus'}</td>
                           <td className="px-3 py-3 font-medium text-slate-500">
                             {matchedMapel ? matchedMapel.nama : 'Mapel dihapus'}
                           </td>
-                          <td className="px-3 py-3 text-center">
-                            <span className="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded text-xs">
-                              {matchedKelas ? matchedKelas.nama : 'Kelas dihapus'}
-                            </span>
-                          </td>
                           <td className="px-3 py-3 text-right">
                             <button
                               onClick={() => handleDeleteMengampu(gm.id)}
                               className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                              title="Hapus Alokasi"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
