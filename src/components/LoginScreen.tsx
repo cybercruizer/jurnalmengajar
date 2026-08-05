@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
-import { User, UserRole } from '../types';
+import { User, UserRole, Sekolah } from '../types';
 import { Shield, BookOpen, UserCheck, Lock, LogIn, Sparkles, School } from 'lucide-react';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: User) => void;
   users: User[];
   schoolName: string;
+  schoolInfo?: Sekolah;
 }
 
-export default function LoginScreen({ onLoginSuccess, users, schoolName }: LoginScreenProps) {
+export default function LoginScreen({ onLoginSuccess, users, schoolName, schoolInfo }: LoginScreenProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorString, setErrorString] = useState('');
   const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('siswa');
 
   const [loading, setLoading] = useState(false);
+  const appName = schoolInfo?.namaAplikasi || 'JurnalKu SMK';
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,12 +99,16 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
             </div>
             
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-white/10 rounded-xl">
-                <School id="school-logo-login" className="w-8 h-8 text-indigo-400" />
+              <div className="p-2 bg-white/10 rounded-xl shrink-0">
+                {schoolInfo?.logoUrl ? (
+                  <img src={schoolInfo.logoUrl} alt="Logo" className="w-9 h-9 object-contain" referrerPolicy="no-referrer" />
+                ) : (
+                  <School id="school-logo-login" className="w-8 h-8 text-indigo-400" />
+                )}
               </div>
               <div>
-                <h1 className="text-2xl font-black font-display tracking-tight">JurnalKu</h1>
-                <p className="text-[10px] text-indigo-200 font-mono tracking-wider">SMART SCHOOL SYSTEM</p>
+                <h1 className="text-2xl font-black font-display tracking-tight leading-none">{appName}</h1>
+                <p className="text-[10px] text-indigo-200 font-mono tracking-wider mt-1">SMART SCHOOL SYSTEM</p>
               </div>
             </div>
             
@@ -124,7 +130,7 @@ export default function LoginScreen({ onLoginSuccess, users, schoolName }: Login
         {/* Right Side: Login Form */}
         <div className="md:col-span-7 p-8 md:p-12 flex flex-col justify-center bg-white">
           <div className="max-w-md mx-auto w-full">
-            <h3 className="text-2xl font-bold text-slate-900 tracking-tight font-display">Selamat Datang Ke JurnalKu</h3>
+            <h3 className="text-2xl font-bold text-slate-900 tracking-tight font-display">Selamat Datang Ke {appName}</h3>
             <p className="text-slate-500 text-sm mt-1">
               Silakan masuk menggunakan akun username dan password terdaftar Anda.
             </p>

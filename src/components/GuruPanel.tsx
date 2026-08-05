@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Guru, Kelas, Mapel, Jurnal, Sekolah } from '../types';
 import { 
   Calendar, Search, Filter, Printer, FileText, CheckCircle, 
-  HelpCircle, AlertTriangle, FileSpreadsheet, Download, RefreshCw, Eye
+  HelpCircle, AlertTriangle, FileSpreadsheet, Download, RefreshCw, Eye, Percent
 } from 'lucide-react';
+import LaporanPersentaseGuru from './LaporanPersentaseGuru';
 
 interface GuruPanelProps {
   guru: Guru;
@@ -454,6 +455,19 @@ export default function GuruPanel({
           </div>
 
         </div>
+      )}
+
+      {/* Laporan Persentase Kehadiran Guru Tab */}
+      {activeSubTab === 'guru-persentase' && (
+        <LaporanPersentaseGuru
+          role="guru"
+          currentGuru={guru}
+          gurus={gurus}
+          kelas={kelas}
+          mapel={mapel}
+          jurnals={jurnals}
+          schoolInfo={schoolInfo}
+        />
       )}
 
     </div>

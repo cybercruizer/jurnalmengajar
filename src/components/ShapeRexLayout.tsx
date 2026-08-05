@@ -3,7 +3,7 @@ import { User, Sekolah } from '../types';
 import { 
   LogOut, School, ShieldAlert, BookOpen, UserCheck, Menu, X, 
   Calendar, Clock, User as UserIcon, ListFilter, AlertCircle, ClipboardList,
-  KeyRound
+  KeyRound, Percent
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -33,6 +33,8 @@ export default function ShapeRexLayout({
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const appName = schoolInfo?.namaAplikasi || 'JurnalKu SMK';
 
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -160,6 +162,12 @@ export default function ShapeRexLayout({
       icon: <ListFilter className="w-4 h-4" />,
       roles: ['guru']
     },
+    {
+      id: 'guru-persentase',
+      label: 'Persentase Kehadiran',
+      icon: <Percent className="w-4 h-4" />,
+      roles: ['guru']
+    },
 
     // ADMIN TABS
     {
@@ -172,6 +180,12 @@ export default function ShapeRexLayout({
       id: 'admin-rekap-harian',
       label: 'Rekap KBM Harian',
       icon: <ClipboardList className="w-4 h-4" />,
+      roles: ['admin']
+    },
+    {
+      id: 'admin-persentase-guru',
+      label: 'Persentase Kehadiran Guru',
+      icon: <Percent className="w-4 h-4" />,
       roles: ['admin']
     },
     {
@@ -236,14 +250,18 @@ export default function ShapeRexLayout({
       <div className="flex relative z-10 min-h-screen">
         
         {/* Sidebar - Desktop */}
-        <aside className="hidden lg:flex flex-col w-72 bg-slate-900 border-r border-slate-850 h-screen sticky top-0 shrink-0 select-none text-slate-300">
+        <aside className="hidden lg:flex flex-col w-72 bg-slate-900 border-r border-slate-850 h-screen sticky top-0 shrink-0 select-none text-slate-300 no-print">
           <div className="p-6 border-b border-slate-850 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-black text-xl font-display shadow-lg shadow-indigo-500/25 shrink-0">
-              J
+            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-black text-xl font-display shadow-lg shadow-indigo-500/25 shrink-0 overflow-hidden">
+              {schoolInfo?.logoUrl ? (
+                <img src={schoolInfo.logoUrl} alt="Logo Sekolah" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+              ) : (
+                appName.charAt(0).toUpperCase()
+              )}
             </div>
-            <div>
-              <h2 className="font-extrabold text-white text-lg tracking-tight truncate leading-tight font-display">
-                JurnalKu
+            <div className="min-w-0 flex-1">
+              <h2 className="font-extrabold text-white text-base tracking-tight truncate leading-tight font-display" title={appName}>
+                {appName}
               </h2>
               <p className="text-[10px] font-bold text-indigo-400 tracking-widest uppercase font-mono mt-0.5">
                 BENTO CONTROL
@@ -321,12 +339,16 @@ export default function ShapeRexLayout({
               </button>
 
               <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">
-                  J
+                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0 overflow-hidden">
+                  {schoolInfo?.logoUrl ? (
+                    <img src={schoolInfo.logoUrl} alt="Logo" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+                  ) : (
+                    appName.charAt(0).toUpperCase()
+                  )}
                 </div>
-                <div>
-                  <h2 className="font-extrabold text-white text-base tracking-tight font-display">
-                    JurnalKu
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-extrabold text-white text-base tracking-tight font-display leading-tight truncate">
+                    {appName}
                   </h2>
                   <p className="text-[9px] font-mono text-indigo-400 uppercase">SMART CONTROL</p>
                 </div>
@@ -385,7 +407,7 @@ export default function ShapeRexLayout({
         <div className="flex-1 flex flex-col min-w-0">
           
           {/* Top Bar / Header */}
-          <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-18 sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between">
+          <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-18 sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between no-print">
             
             {/* Toggle Button for Mobile Screen */}
             <div className="flex items-center gap-3 lg:hidden">
@@ -395,20 +417,35 @@ export default function ShapeRexLayout({
               >
                 <Menu className="w-5.5 h-5.5" />
               </button>
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black font-display text-base">J</div>
-                <span className="font-extrabold text-sm text-slate-900 tracking-tight font-display">
-                  JurnalKu
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black font-display text-base shrink-0 overflow-hidden">
+                  {schoolInfo?.logoUrl ? (
+                    <img src={schoolInfo.logoUrl} alt="Logo" className="w-full h-full object-contain p-0.5" referrerPolicy="no-referrer" />
+                  ) : (
+                    appName.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span className="font-extrabold text-sm text-slate-900 tracking-tight font-display truncate">
+                  {appName}
                 </span>
               </div>
             </div>
 
             {/* Desktop Left Header Indicator */}
             <div className="hidden lg:flex items-center gap-3 text-sm text-slate-500">
-              <Calendar className="w-4.5 h-4.5 text-indigo-550" />
+              <div className="px-2.5 py-1 rounded-lg bg-indigo-50/80 border border-indigo-100 text-indigo-950 font-extrabold text-xs flex items-center gap-2 font-display">
+                {schoolInfo?.logoUrl ? (
+                  <img src={schoolInfo.logoUrl} alt="Logo" className="w-4 h-4 object-contain shrink-0" referrerPolicy="no-referrer" />
+                ) : (
+                  <School className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                )}
+                <span>{appName}</span>
+              </div>
+              <span className="text-slate-300">|</span>
+              <Calendar className="w-4 h-4 text-indigo-550" />
               <span className="font-semibold text-slate-750 text-xs">{currentDate || 'Memuat Tanggal...'}</span>
               <span className="text-slate-300">|</span>
-              <Clock className="w-4.5 h-4.5 text-indigo-500" />
+              <Clock className="w-4 h-4 text-indigo-500" />
               <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50/70 border border-indigo-100/30 px-2 py-0.5 rounded-md">{currentTime || '00:00:00'}</span>
             </div>
 

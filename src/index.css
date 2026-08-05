@@ -24,5 +24,36 @@
 
 /* Global improvements for Bento Theme */
 .rounded-3xl {
-  border-radius: 1.5rem ! IMPORTANT;
+  border-radius: 1.5rem !IMPORTANT;
+}
+
+/* Global Print Styles */
+@media print {
+  .no-print,
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  body, html, #root {
+    background: white !important;
+    color: black !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure school logo and print elements are preserved cleanly */
+  img {
+    max-width: 100% !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

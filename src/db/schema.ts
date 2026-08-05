@@ -74,4 +74,5 @@ export const sekolah = mysqlTable("sekolah", {
   website: varchar("website", { length: 100 }).notNull(),
   email: varchar("email", { length: 100 }).notNull(),
   logoUrl: text("logo_url"),
+  namaAplikasi: varchar("nama_aplikasi", { length: 100 }),
 });

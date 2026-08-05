@@ -74,4 +74,5 @@ export interface Sekolah {
   website: string;
   email: string;
   logoUrl?: string;
+  namaAplikasi?: string;
 }

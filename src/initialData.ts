@@ -10,7 +10,8 @@ export const initialSekolah: Sekolah = {
   wakaKurikulum: 'Sriyono, S.Pd., M.T.',
   nbmWakaKurikulum: '1152643',
   website: 'www.smkmuhmungkid.sch.id',
-  email: 'info@smkmuhmungkid.sch.id'
+  email: 'info@smkmuhmungkid.sch.id',
+  namaAplikasi: 'JurnalKu SMK'
 };
 
 export const initialJurusan: Jurusan[] = [

@@ -122,9 +122,16 @@ export async function ensureTablesExist(poolConn: mysql.Pool) {
         \`nbm_waka_kurikulum\` varchar(50) NOT NULL,
         \`website\` varchar(100) NOT NULL,
         \`email\` varchar(100) NOT NULL,
-        \`logo_url\` text
+        \`logo_url\` text,
+        \`nama_aplikasi\` varchar(100)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    try {
+      await poolConn.query("ALTER TABLE `sekolah` ADD COLUMN `nama_aplikasi` varchar(100)");
+    } catch (e) {
+      // Column may already exist
+    }
 
     await poolConn.query("SET FOREIGN_KEY_CHECKS=1");
     tablesInitialized = true;

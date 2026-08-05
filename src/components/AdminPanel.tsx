@@ -7,6 +7,7 @@ import {
   School, Plus, Trash2, Edit2, Check, X, Shield, Key, Sparkles, Phone, HelpCircle,
   ClipboardList, Search, FileText, Printer, CheckCircle, RefreshCw, AlertCircle, Upload, Download
 } from 'lucide-react';
+import LaporanPersentaseGuru from './LaporanPersentaseGuru';
 
 interface AdminPanelProps {
   users: User[];
@@ -244,11 +245,48 @@ export default function AdminPanel({
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
-        onUpdateSchoolInfo({
-          ...schoolInfo,
-          logoUrl: e.target.result
-        });
-        showBannerNotice('Logo sekolah berhasil diperbarui!');
+        const rawUrl = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 400;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimizedUrl = canvas.toDataURL('image/png');
+            onUpdateSchoolInfo({
+              ...schoolInfo,
+              logoUrl: optimizedUrl
+            });
+          } else {
+            onUpdateSchoolInfo({
+              ...schoolInfo,
+              logoUrl: rawUrl
+            });
+          }
+          showBannerNotice('Logo sekolah berhasil diperbarui!');
+        };
+        img.onerror = () => {
+          onUpdateSchoolInfo({
+            ...schoolInfo,
+            logoUrl: rawUrl
+          });
+          showBannerNotice('Logo sekolah berhasil diperbarui!');
+        };
+        img.src = rawUrl;
       }
     };
     reader.readAsDataURL(file);
@@ -2847,6 +2885,25 @@ KGR-010,Siti Zubaidah, S.Pd.
             </h3>
 
             <form onSubmit={handleUpdateSchool} className="space-y-5 max-w-2xl text-left">
+              {/* APP NAME SETTINGS */}
+              <div className="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-150 space-y-2">
+                <label className="block text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  Nama Aplikasi (App Name di Sidebar & Titlebar)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={schoolInfo.namaAplikasi || 'JurnalKu SMK'}
+                  onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, namaAplikasi: e.target.value })}
+                  className="block w-full px-4 py-2.5 bg-white border border-indigo-200 rounded-xl text-slate-850 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  placeholder="Misal: JurnalKu SMK"
+                />
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Nama aplikasi ini secara otomatis digunakan pada logo/brand sidebar navigasi, header titlebar, dan judul tab browser.
+                </p>
+              </div>
+
               {/* UPLOAD LOGO SEKOLAH */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-dashed border-slate-250 flex flex-col md:flex-row items-center gap-5">
                 <div className="shrink-0">
@@ -3038,6 +3095,18 @@ KGR-010,Siti Zubaidah, S.Pd.
               </button>
             </form>
           </div>
+        )}
+
+        {/* VIEW 10: LAPORAN PERSENTASE KEHADIRAN GURU */}
+        {activeSubTab === 'admin-persentase-guru' && (
+          <LaporanPersentaseGuru
+            role="admin"
+            gurus={guru}
+            kelas={kelas}
+            mapel={mapel}
+            jurnals={jurnals || []}
+            schoolInfo={schoolInfo}
+          />
         )}
 
       </div>

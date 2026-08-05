@@ -55,7 +55,9 @@ export default function App() {
       .then(result => {
         if (result.success) {
           const dbData = result.data;
-          if (dbData.sekolah) setSchoolInfo(dbData.sekolah);
+          if (dbData.sekolah) {
+            setSchoolInfo(prev => ({ ...initialSekolah, ...prev, ...dbData.sekolah }));
+          }
           if (Array.isArray(dbData.users)) setUsers(dbData.users);
           if (Array.isArray(dbData.jurusan)) setJurusan(dbData.jurusan);
           if (Array.isArray(dbData.mapel)) setMapel(dbData.mapel);
@@ -72,6 +74,11 @@ export default function App() {
         setLoading(false); // fallback to initialData
       });
   }, []);
+
+  useEffect(() => {
+    const appName = schoolInfo.namaAplikasi || 'JurnalKu SMK';
+    document.title = `${appName} - ${schoolInfo.nama}`;
+  }, [schoolInfo]);
 
   const syncToDb = (tableName: string, data: any) => {
     fetch(`/api/sync/${tableName}`, {
@@ -235,6 +242,7 @@ export default function App() {
           onLoginSuccess={handleLoginSuccess}
           users={users}
           schoolName={schoolInfo.nama}
+          schoolInfo={schoolInfo}
         />
       )}
 
