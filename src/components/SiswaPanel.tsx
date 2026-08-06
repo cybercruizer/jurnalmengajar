@@ -64,27 +64,10 @@ export default function SiswaPanel({
     setSelectedDay(dayName);
   }, [selectedDate]);
 
-  // Auto-resolve Assigned Teacher based on selected Mapel (all teachers who teach this subject)
+  // Reset selected teachers when mapel changes so student fills them manually
   useEffect(() => {
-    if (!selectedMapelId) {
-      setSelectedGuruIds([]);
-      return;
-    }
-    
-    // Look up all matching guru mengampu mappings for this subject
-    const matches = guruMengampu.filter(
-      g => g.mapelId === selectedMapelId
-    );
-
-    if (matches.length > 0) {
-      const ids = Array.from(new Set(
-        matches.flatMap(match => match.guruId.split(',').map(id => id.trim()).filter(Boolean))
-      ));
-      setSelectedGuruIds(ids);
-    } else {
-      setSelectedGuruIds([]);
-    }
-  }, [selectedMapelId, guruMengampu, guru]);
+    setSelectedGuruIds([]);
+  }, [selectedMapelId]);
 
   // Filter journals logged specifically for this student's class
   const myClassJournals = jurnals
@@ -435,7 +418,7 @@ export default function SiswaPanel({
                     });
                   })()}
                 </div>
-                <p className="text-xs text-slate-405 mt-1.5">Sistem memetakan guru pengampu secara otomatis sesuai mata pelajaran yang dipilih.</p>
+                <p className="text-xs text-slate-405 mt-1.5">Silakan pilih / centang guru pengampu sesuai mata pelajaran yang dipilih.</p>
               </div>
 
               {/* Status Kehadiran Guru */}
