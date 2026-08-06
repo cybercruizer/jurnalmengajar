@@ -117,8 +117,8 @@ export default function AdminPanel({
 
   // 7. Guru Mengampu form
   const [ampuGuruId, setAmpuGuruId] = useState('');
-  const [ampuMapelId, setAmpuMapelId] = useState('');
-  const [ampuKelasIds, setAmpuKelasIds] = useState<string[]>([]);
+  const [ampuMapelIds, setAmpuMapelIds] = useState<string[]>([]);
+  const [ampuSearchMapel, setAmpuSearchMapel] = useState('');
 
   // 8. Admin input jurnal states
   const [showInputJurnalModal, setShowInputJurnalModal] = useState(false);
@@ -321,8 +321,8 @@ export default function AdminPanel({
     setGuruNama('');
     setGuruKode('');
     setAmpuGuruId('');
-    setAmpuMapelId('');
-    setAmpuKelasIds([]);
+    setAmpuMapelIds([]);
+    setAmpuSearchMapel('');
   };
 
   // CRUD ACTIONS
@@ -529,28 +529,43 @@ export default function AdminPanel({
       showError('Silakan pilih Guru Pengajar terlebih dahulu.');
       return;
     }
-    if (!ampuMapelId) {
-      showError('Silakan pilih Mata Pelajaran terlebih dahulu.');
+    if (ampuMapelIds.length === 0) {
+      showError('Silakan pilih minimal 1 Mata Pelajaran.');
       return;
     }
 
-    const isDuplicated = guruMengampu.some(
-      gm => gm.guruId === ampuGuruId && gm.mapelId === ampuMapelId
-    );
-    if (isDuplicated) {
-      showError('Mapping Guru Mengampu untuk mata pelajaran ini sudah terdaftar sebelumnya!');
-      return;
+    let addedCount = 0;
+    let skippedCount = 0;
+    const newAllocations: GuruMengampu[] = [];
+
+    ampuMapelIds.forEach((mId, index) => {
+      const isDuplicated = guruMengampu.some(
+        gm => gm.guruId === ampuGuruId && gm.mapelId === mId
+      );
+      if (isDuplicated) {
+        skippedCount++;
+      } else {
+        newAllocations.push({
+          id: 'amp-' + (Date.now() + index),
+          guruId: ampuGuruId,
+          mapelId: mId,
+          kelasId: ''
+        });
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      onUpdateGuruMengampu([...guruMengampu, ...newAllocations]);
+      if (skippedCount > 0) {
+        showBannerNotice(`Berhasil menambahkan ${addedCount} mata pelajaran diampu (${skippedCount} mapel sudah diampu sebelumnya).`);
+      } else {
+        showBannerNotice(`Berhasil memetakan ${addedCount} mata pelajaran diampu.`);
+      }
+    } else {
+      showError('Semua mata pelajaran yang dipilih sudah pernah diampu oleh guru ini sebelumnya.');
     }
 
-    const newAllocation: GuruMengampu = {
-      id: 'amp-' + Date.now(),
-      guruId: ampuGuruId,
-      mapelId: ampuMapelId,
-      kelasId: ''
-    };
-
-    onUpdateGuruMengampu([...guruMengampu, newAllocation]);
-    showBannerNotice('Alokasi Guru Mengampu berhasil dipetakan.');
     resetFormValues();
   };
 
@@ -1975,17 +1990,122 @@ KGR-010,Siti Zubaidah, S.Pd.
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Pilih Mata Pelajaran</label>
-                  <select
-                    value={ampuMapelId}
-                    onChange={(e) => setAmpuMapelId(e.target.value)}
-                    className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
-                  >
-                    <option value="">-- pilih mapel --</option>
-                    {mapel.map((m) => (
-                      <option key={m.id} value={m.id}>[{m.kode}] - {m.nama}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                      Pilih Mata Pelajaran (Bulk Select)
+                    </label>
+                    {ampuMapelIds.length > 0 && (
+                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-md">
+                        {ampuMapelIds.length} Mapel Terpilih
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Filter & Select All / Deselect All Controls */}
+                  <div className="space-y-2 mb-2">
+                    {mapel.length > 5 && (
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={ampuSearchMapel}
+                          onChange={(e) => setAmpuSearchMapel(e.target.value)}
+                          placeholder="Cari mata pelajaran..."
+                          className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const filtered = mapel
+                              .filter(m => m.nama.toLowerCase().includes(ampuSearchMapel.toLowerCase()) || m.kode.toLowerCase().includes(ampuSearchMapel.toLowerCase()))
+                              .map(m => m.id);
+                            setAmpuMapelIds(Array.from(new Set([...ampuMapelIds, ...filtered])));
+                          }}
+                          className="text-indigo-600 hover:text-indigo-800 font-bold hover:underline cursor-pointer"
+                        >
+                          Pilih Semua
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setAmpuMapelIds([])}
+                          className="text-slate-500 hover:text-slate-700 font-medium hover:underline cursor-pointer"
+                        >
+                          Batal Pilih
+                        </button>
+                      </div>
+                      <span className="text-slate-400 text-[10px]">Total: {mapel.length} mapel</span>
+                    </div>
+                  </div>
+
+                  {/* Checklist of Mapel */}
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 max-h-60 overflow-y-auto space-y-1.5">
+                    {(() => {
+                      const filteredMapel = mapel.filter(m => 
+                        m.nama.toLowerCase().includes(ampuSearchMapel.toLowerCase()) || 
+                        m.kode.toLowerCase().includes(ampuSearchMapel.toLowerCase())
+                      );
+
+                      if (filteredMapel.length === 0) {
+                        return (
+                          <div className="text-center py-4 text-xs text-slate-400 italic">
+                            Mata pelajaran tidak ditemukan.
+                          </div>
+                        );
+                      }
+
+                      // Existing mapel mapped to this teacher
+                      const existingTeacherMapelIds = guruMengampu
+                        .filter(gm => gm.guruId === ampuGuruId)
+                        .map(gm => gm.mapelId);
+
+                      return filteredMapel.map((m) => {
+                        const isChecked = ampuMapelIds.includes(m.id);
+                        const isAlreadyMapped = ampuGuruId && existingTeacherMapelIds.includes(m.id);
+
+                        return (
+                          <label
+                            key={m.id}
+                            className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all border text-xs ${
+                              isChecked
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold shadow-xs'
+                                : isAlreadyMapped
+                                ? 'bg-amber-50/60 border-amber-200/80 text-amber-900'
+                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setAmpuMapelIds(ampuMapelIds.filter(id => id !== m.id));
+                                  } else {
+                                    setAmpuMapelIds([...ampuMapelIds, m.id]);
+                                  }
+                                }}
+                                className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer shrink-0"
+                              />
+                              <span className="truncate">
+                                <span className="font-mono text-[10px] text-slate-400 mr-1.5">[{m.kode}]</span>
+                                {m.nama}
+                              </span>
+                            </div>
+                            {isAlreadyMapped && (
+                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100/70 px-1.5 py-0.5 rounded shrink-0">
+                                Sudah Diampu
+                              </span>
+                            )}
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
 
                 <button
