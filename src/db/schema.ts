@@ -42,23 +42,23 @@ export const guru = mysqlTable("guru", {
 });
 
 export const guruMengampu = mysqlTable("guru_mengampu", {
-  id: varchar("id", { length: 36 }).primaryKey(),
-  guruId: varchar("guru_id", { length: 36 }).notNull().references(() => guru.id, { onDelete: "cascade" }),
-  mapelId: varchar("mapel_id", { length: 36 }).notNull().references(() => mapel.id, { onDelete: "cascade" }),
-  kelasId: varchar("kelas_id", { length: 36 }).notNull().references(() => kelas.id, { onDelete: "cascade" }),
+  id: varchar("id", { length: 100 }).primaryKey(),
+  guruId: varchar("guru_id", { length: 100 }).notNull(),
+  mapelId: varchar("mapel_id", { length: 100 }).notNull(),
+  kelasId: varchar("kelas_id", { length: 255 }),
 });
 
 export const jurnal = mysqlTable("jurnal", {
-  id: varchar("id", { length: 36 }).primaryKey(),
-  hari: varchar("hari", { length: 20 }).notNull(),
-  tanggal: varchar("tanggal", { length: 20 }).notNull(),
-  jamKe: varchar("jam_ke", { length: 20 }).notNull(),
-  kelasId: varchar("kelas_id", { length: 36 }).notNull().references(() => kelas.id, { onDelete: "cascade" }),
-  mapelId: varchar("mapel_id", { length: 36 }).notNull().references(() => mapel.id, { onDelete: "cascade" }),
-  guruId: varchar("guru_id", { length: 36 }).notNull().references(() => guru.id, { onDelete: "cascade" }),
-  statusKehadiran: varchar("status_kehadiran", { length: 20 }).notNull(), // hadir, tidak, tugas
+  id: varchar("id", { length: 100 }).primaryKey(),
+  hari: varchar("hari", { length: 50 }).notNull(),
+  tanggal: varchar("tanggal", { length: 50 }).notNull(),
+  jamKe: varchar("jam_ke", { length: 100 }).notNull(),
+  kelasId: varchar("kelas_id", { length: 100 }).notNull(),
+  mapelId: varchar("mapel_id", { length: 100 }).notNull(),
+  guruId: text("guru_id").notNull(),
+  statusKehadiran: varchar("status_kehadiran", { length: 50 }).notNull(), // hadir, tidak, tugas
   catatan: text("catatan").notNull(),
-  diinputOleh: varchar("diinput_oleh", { length: 36 }).notNull(), // references siswaId
+  diinputOleh: varchar("diinput_oleh", { length: 100 }).notNull(), // references siswaId or username
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

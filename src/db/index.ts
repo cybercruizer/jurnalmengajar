@@ -87,25 +87,25 @@ export async function ensureTablesExist(poolConn: mysql.Pool) {
 
     await poolConn.query(`
       CREATE TABLE IF NOT EXISTS \`guru_mengampu\` (
-        \`id\` varchar(36) PRIMARY KEY,
-        \`guru_id\` varchar(36) NOT NULL,
-        \`mapel_id\` varchar(36) NOT NULL,
-        \`kelas_id\` varchar(36) NOT NULL
+        \`id\` varchar(100) PRIMARY KEY,
+        \`guru_id\` varchar(100) NOT NULL,
+        \`mapel_id\` varchar(100) NOT NULL,
+        \`kelas_id\` varchar(255)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
     await poolConn.query(`
       CREATE TABLE IF NOT EXISTS \`jurnal\` (
-        \`id\` varchar(36) PRIMARY KEY,
-        \`hari\` varchar(20) NOT NULL,
-        \`tanggal\` varchar(20) NOT NULL,
-        \`jam_ke\` varchar(20) NOT NULL,
-        \`kelas_id\` varchar(36) NOT NULL,
-        \`mapel_id\` varchar(36) NOT NULL,
-        \`guru_id\` varchar(36) NOT NULL,
-        \`status_kehadiran\` varchar(20) NOT NULL,
+        \`id\` varchar(100) PRIMARY KEY,
+        \`hari\` varchar(50) NOT NULL,
+        \`tanggal\` varchar(50) NOT NULL,
+        \`jam_ke\` varchar(100) NOT NULL,
+        \`kelas_id\` varchar(100) NOT NULL,
+        \`mapel_id\` varchar(100) NOT NULL,
+        \`guru_id\` text NOT NULL,
+        \`status_kehadiran\` varchar(50) NOT NULL,
         \`catatan\` text NOT NULL,
-        \`diinput_oleh\` varchar(36) NOT NULL,
+        \`diinput_oleh\` varchar(100) NOT NULL,
         \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
@@ -129,9 +129,29 @@ export async function ensureTablesExist(poolConn: mysql.Pool) {
 
     try {
       await poolConn.query("ALTER TABLE `sekolah` ADD COLUMN `nama_aplikasi` varchar(100)");
-    } catch (e) {
-      // Column may already exist
-    }
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `guru_id` TEXT NOT NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `hari` VARCHAR(50) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `tanggal` VARCHAR(50) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `jam_ke` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `kelas_id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `mapel_id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `status_kehadiran` VARCHAR(50) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurnal` MODIFY COLUMN `diinput_oleh` VARCHAR(100) NOT NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `kelas_id` VARCHAR(255) NULL");
+      await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `guru_id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `mapel_id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+    } catch (e) {}
 
     await poolConn.query("SET FOREIGN_KEY_CHECKS=1");
     tablesInitialized = true;

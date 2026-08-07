@@ -226,12 +226,87 @@ async function startServer() {
     }
   });
 
+  // Dedicated API Route to add/upsert journal entry
+  app.post("/api/jurnal", express.json(), async (req, res) => {
+    try {
+      const entry = req.body;
+      if (!entry || !entry.id || !entry.kelasId || !entry.mapelId) {
+        return res.status(400).json({ success: false, message: "Data jurnal tidak lengkap" });
+      }
+
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { sql, desc } = await import("drizzle-orm");
+
+      const processedEntry = {
+        id: entry.id,
+        hari: entry.hari || '',
+        tanggal: entry.tanggal || '',
+        jamKe: entry.jamKe || '',
+        kelasId: entry.kelasId,
+        mapelId: entry.mapelId,
+        guruId: entry.guruId || '',
+        statusKehadiran: entry.statusKehadiran || 'hadir',
+        catatan: entry.catatan || '',
+        diinputOleh: entry.diinputOleh || 'system',
+        createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date()
+      };
+
+      await db.transaction(async (tx: any) => {
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
+        // Upsert record
+        await tx.insert(schema.jurnal).values(processedEntry).onDuplicateKeyUpdate({
+          set: {
+            hari: processedEntry.hari,
+            tanggal: processedEntry.tanggal,
+            jamKe: processedEntry.jamKe,
+            kelasId: processedEntry.kelasId,
+            mapelId: processedEntry.mapelId,
+            guruId: processedEntry.guruId,
+            statusKehadiran: processedEntry.statusKehadiran,
+            catatan: processedEntry.catatan,
+            diinputOleh: processedEntry.diinputOleh,
+          }
+        });
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
+      });
+
+      // Fetch all updated journals to keep client in sync
+      const allJurnals = await db.select().from(schema.jurnal).orderBy(desc(schema.jurnal.createdAt));
+
+      res.json({ success: true, jurnals: allJurnals });
+    } catch (error: any) {
+      console.error("Error saving single jurnal:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Dedicated API Route to delete a journal entry
+  app.delete("/api/jurnal/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { eq, desc } = await import("drizzle-orm");
+
+      await db.delete(schema.jurnal).where(eq(schema.jurnal.id, id));
+      const allJurnals = await db.select().from(schema.jurnal).orderBy(desc(schema.jurnal.createdAt));
+
+      res.json({ success: true, jurnals: allJurnals });
+    } catch (error: any) {
+      console.error("Error deleting jurnal:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // API Route for generic sync
   app.post("/api/sync/:table", express.json({limit: "10mb"}), async (req, res) => {
     try {
       const { table } = req.params;
       const data = req.body;
-      const { getDb, getPool } = await import("./src/db/index.js");
+      const { getDb } = await import("./src/db/index.js");
       const db = await getDb();
       const schema = await import("./src/db/schema.js");
 
@@ -310,29 +385,46 @@ async function startServer() {
         await db.transaction(async (tx: any) => {
           await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
 
-          let actualTableName = table;
-          if (table === "guruMengampu") actualTableName = "guru_mengampu";
-
-          await tx.execute(sql.raw(`DELETE FROM \`${actualTableName}\``));
-
-          if (uniqueData.length > 0) {
-            // Chunk inserts to avoid query size limits
-            const chunkSize = 50;
-            for (let i = 0; i < uniqueData.length; i += chunkSize) {
-              const chunk = uniqueData.slice(i, i + chunkSize).map((item: any) => {
-                let processedItem = item;
-                if (table === "sekolah" && !processedItem.id) {
-                  processedItem = { ...processedItem, id: "sek-1" };
+          if (table === "jurnal") {
+            // For journals, upsert all entries so syncing from one device does not delete entries from another device
+            for (const item of uniqueData) {
+              const processedItem = {
+                ...item,
+                createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
+              };
+              await tx.insert(schema.jurnal).values(processedItem).onDuplicateKeyUpdate({
+                set: {
+                  hari: processedItem.hari || '',
+                  tanggal: processedItem.tanggal || '',
+                  jamKe: processedItem.jamKe || '',
+                  kelasId: processedItem.kelasId,
+                  mapelId: processedItem.mapelId,
+                  guruId: processedItem.guruId || '',
+                  statusKehadiran: processedItem.statusKehadiran || 'hadir',
+                  catatan: processedItem.catatan || '',
+                  diinputOleh: processedItem.diinputOleh || 'system',
                 }
-                if (table === "jurnal" && processedItem.createdAt) {
-                  return {
-                    ...processedItem,
-                    createdAt: new Date(processedItem.createdAt)
-                  };
-                }
-                return processedItem;
               });
-              await tx.insert(tableSchema).values(chunk);
+            }
+          } else {
+            let actualTableName = table;
+            if (table === "guruMengampu") actualTableName = "guru_mengampu";
+
+            await tx.execute(sql.raw(`DELETE FROM \`${actualTableName}\``));
+
+            if (uniqueData.length > 0) {
+              // Chunk inserts to avoid query size limits
+              const chunkSize = 50;
+              for (let i = 0; i < uniqueData.length; i += chunkSize) {
+                const chunk = uniqueData.slice(i, i + chunkSize).map((item: any) => {
+                  let processedItem = item;
+                  if (table === "sekolah" && !processedItem.id) {
+                    processedItem = { ...processedItem, id: "sek-1" };
+                  }
+                  return processedItem;
+                });
+                await tx.insert(tableSchema).values(chunk);
+              }
             }
           }
 

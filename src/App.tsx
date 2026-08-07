@@ -49,30 +49,37 @@ export default function App() {
     }, 4000);
   };
 
-  useEffect(() => {
-    fetch('/api/data')
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) {
-          const dbData = result.data;
-          if (dbData.sekolah) {
-            setSchoolInfo(prev => ({ ...initialSekolah, ...prev, ...dbData.sekolah }));
-          }
-          if (Array.isArray(dbData.users)) setUsers(dbData.users);
-          if (Array.isArray(dbData.jurusan)) setJurusan(dbData.jurusan);
-          if (Array.isArray(dbData.mapel)) setMapel(dbData.mapel);
-          if (Array.isArray(dbData.kelas)) setKelas(dbData.kelas);
-          if (Array.isArray(dbData.siswa)) setSiswa(dbData.siswa);
-          if (Array.isArray(dbData.guru)) setGuru(dbData.guru);
-          if (Array.isArray(dbData.guruMengampu)) setGuruMengampu(dbData.guruMengampu);
-          if (Array.isArray(dbData.jurnal)) setJurnals(dbData.jurnal);
+  const fetchDataFromDb = async () => {
+    try {
+      const res = await fetch('/api/data');
+      const result = await res.json();
+      if (result.success) {
+        const dbData = result.data;
+        if (dbData.sekolah) {
+          setSchoolInfo(prev => ({ ...initialSekolah, ...prev, ...dbData.sekolah }));
         }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching from DB:', err);
-        setLoading(false); // fallback to initialData
-      });
+        if (Array.isArray(dbData.users)) setUsers(dbData.users);
+        if (Array.isArray(dbData.jurusan)) setJurusan(dbData.jurusan);
+        if (Array.isArray(dbData.mapel)) setMapel(dbData.mapel);
+        if (Array.isArray(dbData.kelas)) setKelas(dbData.kelas);
+        if (Array.isArray(dbData.siswa)) setSiswa(dbData.siswa);
+        if (Array.isArray(dbData.guru)) setGuru(dbData.guru);
+        if (Array.isArray(dbData.guruMengampu)) setGuruMengampu(dbData.guruMengampu);
+        if (Array.isArray(dbData.jurnal)) setJurnals(dbData.jurnal);
+      }
+    } catch (err) {
+      console.error('Error fetching from DB:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDataFromDb();
+    const interval = setInterval(() => {
+      fetchDataFromDb();
+    }, 10000); // Automatic sync every 10s
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -188,30 +195,57 @@ export default function App() {
   // -------------------------------------------------------------
   // LIVE JOURNAL ACTIONS
   // -------------------------------------------------------------
-  const handleAddJurnal = (newEntry: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => {
+  const handleAddJurnal = async (newEntry: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => {
     if (!currentUser) return;
 
     try {
       const fullEntry: Jurnal = {
         ...newEntry,
         id: 'jur-j' + Date.now(),
-        diinputOleh: currentUser.referenceId || 'system',
+        diinputOleh: currentUser.referenceId || currentUser.name || 'system',
         createdAt: new Date().toISOString()
       };
 
-      setJurnals([fullEntry, ...jurnals]);
-      showToast('Jurnal mengajar berhasil disimpan & dipublikasikan!', 'success');
+      // Optimistic update
+      setJurnals(prev => [fullEntry, ...prev]);
+
+      const res = await fetch('/api/jurnal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullEntry)
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        if (Array.isArray(result.jurnals)) {
+          setJurnals(result.jurnals);
+        }
+        showToast('Jurnal mengajar berhasil disimpan & dipublikasikan!', 'success');
+      } else {
+        showToast('Gagal menyimpan ke database server: ' + (result.error || result.message || 'Error'), 'error');
+      }
     } catch (err: any) {
-      showToast('Gagal menyimpan jurnal mengajar: ' + err.message, 'error');
+      console.error('Error adding jurnal:', err);
+      showToast('Gagal terhubung ke database server saat menyimpan jurnal.', 'error');
     }
   };
 
-  const handleDeleteJurnal = (id: string) => {
+  const handleDeleteJurnal = async (id: string) => {
     try {
-      setJurnals(jurnals.filter(j => j.id !== id));
-      showToast('Laporan jurnal mengajar berhasil dihapus!', 'success');
+      setJurnals(prev => prev.filter(j => j.id !== id));
+      const res = await fetch(`/api/jurnal/${id}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.success) {
+        if (Array.isArray(result.jurnals)) {
+          setJurnals(result.jurnals);
+        }
+        showToast('Laporan jurnal mengajar berhasil dihapus!', 'success');
+      } else {
+        showToast('Gagal menghapus dari database server.', 'error');
+      }
     } catch (err: any) {
-      showToast('Gagal menghapus jurnal mengajar: ' + err.message, 'error');
+      console.error('Error deleting jurnal:', err);
+      showToast('Gagal terhubung ke database server saat menghapus jurnal.', 'error');
     }
   };
 
