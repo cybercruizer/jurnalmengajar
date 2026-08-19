@@ -10,34 +10,88 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  const syncQueues: Record<string, Promise<any>> = {};
+  // Realtime SSE Clients Collection
+  const sseClients = new Set<express.Response>();
 
-  async function runInQueue(table: string, task: () => Promise<any>): Promise<any> {
-    const previous = syncQueues[table] || Promise.resolve();
-    let resolveNext: any;
-    const nextPromise = new Promise((resolve) => {
-      resolveNext = resolve;
-    });
-    syncQueues[table] = nextPromise;
-
+  // Helper to broadcast freshest database data to all connected realtime clients
+  async function broadcastAllData() {
     try {
-      await previous;
-    } catch (err) {
-      // Ignore previous errors to keep queue running
-    }
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
 
-    try {
-      const result = await task();
-      resolveNext();
-      return result;
-    } catch (err) {
-      resolveNext();
-      throw err;
+      const [
+        usersData, sekolahData, jurusanData, mapelData, 
+        kelasData, siswaData, guruData, guruMengampuData, jurnalData
+      ] = await Promise.all([
+        db.select().from(schema.users),
+        db.select().from(schema.sekolah),
+        db.select().from(schema.jurusan),
+        db.select().from(schema.mapel),
+        db.select().from(schema.kelas),
+        db.select().from(schema.siswa),
+        db.select().from(schema.guru),
+        db.select().from(schema.guruMengampu),
+        db.select().from(schema.jurnal)
+      ]);
+
+      const payload = JSON.stringify({
+        type: "realtime_update",
+        data: {
+          users: usersData,
+          sekolah: sekolahData[0] || null,
+          jurusan: jurusanData,
+          mapel: mapelData,
+          kelas: kelasData,
+          siswa: siswaData,
+          guru: guruData,
+          guruMengampu: guruMengampuData,
+          jurnal: jurnalData
+        }
+      });
+
+      for (const client of sseClients) {
+        try {
+          client.write(`data: ${payload}\n\n`);
+        } catch (e) {
+          sseClients.delete(client);
+        }
+      }
+    } catch (e) {
+      console.error("Broadcast error:", e);
     }
   }
 
+  // Periodic SSE Heartbeat to prevent socket drops
+  setInterval(() => {
+    for (const client of sseClients) {
+      try {
+        client.write(`: heartbeat\n\n`);
+      } catch (e) {
+        sseClients.delete(client);
+      }
+    }
+  }, 20000);
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // SSE Realtime Endpoint
+  app.get("/api/events", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    // Send initial connected event
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+    sseClients.add(res);
+
+    req.on("close", () => {
+      sseClients.delete(res);
+    });
+  });
 
   // API Route to write to .env
   app.post("/api/save-env", async (req, res) => {
@@ -51,7 +105,6 @@ async function startServer() {
         envContent = fs.readFileSync(".env.example", "utf-8");
       }
 
-      // Helper function to update or append variable
       const setEnvVar = (content: string, key: string, value: string) => {
         const regex = new RegExp(`^${key}=.*$`, "m");
         const formattedLine = `${key}="${value.replace(/"/g, '\\"')}"`;
@@ -71,7 +124,6 @@ async function startServer() {
 
       fs.writeFileSync(".env", envContent, "utf-8");
       
-      // Update process.env so they are immediately available
       process.env.DB_TYPE = dbType;
       process.env.DB_HOST = host;
       process.env.DB_PORT = port;
@@ -205,7 +257,6 @@ async function startServer() {
       const schema = await import("./src/db/schema.js");
       const { eq, and } = await import("drizzle-orm");
 
-      // Verify current user & password
       const user = await db.select().from(schema.users).where(
         and(eq(schema.users.username, username), eq(schema.users.password, currentPassword))
       ).limit(1);
@@ -214,11 +265,11 @@ async function startServer() {
         return res.status(400).json({ success: false, message: "Password lama salah" });
       }
 
-      // Update password
       await db.update(schema.users)
         .set({ password: newPassword })
         .where(eq(schema.users.username, username));
 
+      broadcastAllData();
       res.json({ success: true, message: "Password berhasil diperbarui" });
     } catch (error: any) {
       console.error("Change password error:", error);
@@ -226,7 +277,7 @@ async function startServer() {
     }
   });
 
-  // Dedicated API Route to add/upsert journal entry
+  // Dedicated API Route to add/upsert journal entry in realtime
   app.post("/api/jurnal", express.json(), async (req, res) => {
     try {
       const entry = req.body;
@@ -255,7 +306,6 @@ async function startServer() {
 
       await db.transaction(async (tx: any) => {
         await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
-        // Upsert record
         await tx.insert(schema.jurnal).values(processedEntry).onDuplicateKeyUpdate({
           set: {
             hari: processedEntry.hari,
@@ -272,8 +322,8 @@ async function startServer() {
         await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
       });
 
-      // Fetch all updated journals to keep client in sync
       const allJurnals = await db.select().from(schema.jurnal).orderBy(desc(schema.jurnal.createdAt));
+      broadcastAllData();
 
       res.json({ success: true, jurnals: allJurnals });
     } catch (error: any) {
@@ -282,7 +332,7 @@ async function startServer() {
     }
   });
 
-  // Dedicated API Route to delete a journal entry
+  // Dedicated API Route to delete a journal entry in realtime
   app.delete("/api/jurnal/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -293,6 +343,7 @@ async function startServer() {
 
       await db.delete(schema.jurnal).where(eq(schema.jurnal.id, id));
       const allJurnals = await db.select().from(schema.jurnal).orderBy(desc(schema.jurnal.createdAt));
+      broadcastAllData();
 
       res.json({ success: true, jurnals: allJurnals });
     } catch (error: any) {
@@ -301,14 +352,57 @@ async function startServer() {
     }
   });
 
-  // API Route for generic sync
-  app.post("/api/sync/:table", express.json({limit: "10mb"}), async (req, res) => {
+  // API Route to update school identity in realtime
+  app.post("/api/sekolah", async (req, res) => {
     try {
-      const { table } = req.params;
-      const data = req.body;
+      const schoolData = req.body;
       const { getDb } = await import("./src/db/index.js");
       const db = await getDb();
       const schema = await import("./src/db/schema.js");
+      const { sql } = await import("drizzle-orm");
+
+      const entry = {
+        id: schoolData.id || "sek-1",
+        nama: schoolData.nama || "",
+        npsn: schoolData.npsn || "",
+        alamat: schoolData.alamat || "",
+        kepalaSekolah: schoolData.kepalaSekolah || "",
+        nipKepalaSekolah: schoolData.nipKepalaSekolah || "",
+        logoUrl: schoolData.logoUrl || "",
+        namaAplikasi: schoolData.namaAplikasi || "JurnalKu SMK"
+      };
+
+      await db.transaction(async (tx: any) => {
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
+        await tx.insert(schema.sekolah).values(entry).onDuplicateKeyUpdate({
+          set: {
+            nama: entry.nama,
+            npsn: entry.npsn,
+            alamat: entry.alamat,
+            kepalaSekolah: entry.kepalaSekolah,
+            nipKepalaSekolah: entry.nipKepalaSekolah,
+            logoUrl: entry.logoUrl,
+            namaAplikasi: entry.namaAplikasi,
+          }
+        });
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
+      });
+
+      broadcastAllData();
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error updating sekolah:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Helper for batch upsert & delete without table wiping
+  async function handleBatchSave(table: string, data: any[], req: express.Request, res: express.Response) {
+    try {
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { sql, eq } = await import("drizzle-orm");
 
       const tableSchema = (schema as any)[table];
       if (!tableSchema) {
@@ -319,124 +413,75 @@ async function startServer() {
         return res.status(400).json({ success: false, message: "Data must be an array" });
       }
 
-      // Deduplicate elements by id and unique fields to prevent constraint failures in the same batch
-      const uniqueData = [];
+      // Deduplicate items
+      const uniqueData: any[] = [];
       const seenIds = new Set();
-      const seenUniques = new Set();
       for (const item of data) {
         if (item && typeof item === 'object') {
-          const id = item.id;
-          if (id) {
-            if (seenIds.has(id)) continue;
-            seenIds.add(id);
+          if (item.id) {
+            if (seenIds.has(item.id)) continue;
+            seenIds.add(item.id);
           }
-
-          // Case-insensitive check for other unique columns
-          if (table === "users") {
-            const username = (item.username || item.username_ || "").toString().toLowerCase().trim();
-            if (username) {
-              if (seenUniques.has(`user_username_${username}`)) continue;
-              seenUniques.add(`user_username_${username}`);
-            }
-          } else if (table === "mapel") {
-            const kode = (item.kode || "").toString().toLowerCase().trim();
-            if (kode) {
-              if (seenUniques.has(`mapel_kode_${kode}`)) continue;
-              seenUniques.add(`mapel_kode_${kode}`);
-            }
-          } else if (table === "siswa") {
-            const nis = (item.nis || "").toString().toLowerCase().trim();
-            if (nis) {
-              if (seenUniques.has(`siswa_nis_${nis}`)) continue;
-              seenUniques.add(`siswa_nis_${nis}`);
-            }
-          } else if (table === "guru") {
-            const kodeGuru = (item.kodeGuru || item.kode_guru || "").toString().toLowerCase().trim();
-            if (kodeGuru) {
-              if (seenUniques.has(`guru_kodeguru_${kodeGuru}`)) continue;
-              seenUniques.add(`guru_kodeguru_${kodeGuru}`);
-            }
-          }
+          uniqueData.push(item);
         }
-        uniqueData.push(item);
       }
 
-      await runInQueue(table, async () => {
-        const { sql } = await import("drizzle-orm");
+      await db.transaction(async (tx: any) => {
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
 
-        // If syncing users, fetch existing admin accounts from the database and preserve them
+        let actualTableName = table;
+        if (table === "guruMengampu") actualTableName = "guru_mengampu";
+
+        // For users, ensure we don't drop existing admins
         if (table === "users") {
           try {
-            const { eq } = await import("drizzle-orm");
-            const existingAdmins = await db.select().from(tableSchema).where(eq(tableSchema.role, "admin"));
+            const existingAdmins = await tx.select().from(tableSchema).where(eq(tableSchema.role, "admin"));
             for (const admin of existingAdmins) {
-              const exists = uniqueData.some((u: any) => 
-                u.id === admin.id || u.username.toLowerCase() === admin.username.toLowerCase()
-              );
-              if (!exists) {
+              if (!uniqueData.some(u => u.id === admin.id || (u.username && u.username.toLowerCase() === admin.username.toLowerCase()))) {
                 uniqueData.push(admin);
               }
             }
-          } catch (adminErr) {
-            console.error("Gagal memproses pengamanan akun admin:", adminErr);
+          } catch (e) {}
+        }
+
+        // Replace records cleanly
+        await tx.execute(sql.raw(`DELETE FROM \`${actualTableName}\``));
+
+        if (uniqueData.length > 0) {
+          const chunkSize = 50;
+          for (let i = 0; i < uniqueData.length; i += chunkSize) {
+            const chunk = uniqueData.slice(i, i + chunkSize);
+            await tx.insert(tableSchema).values(chunk);
           }
         }
 
-        await db.transaction(async (tx: any) => {
-          await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
-
-          if (table === "jurnal") {
-            // For journals, upsert all entries so syncing from one device does not delete entries from another device
-            for (const item of uniqueData) {
-              const processedItem = {
-                ...item,
-                createdAt: item.createdAt ? new Date(item.createdAt) : new Date()
-              };
-              await tx.insert(schema.jurnal).values(processedItem).onDuplicateKeyUpdate({
-                set: {
-                  hari: processedItem.hari || '',
-                  tanggal: processedItem.tanggal || '',
-                  jamKe: processedItem.jamKe || '',
-                  kelasId: processedItem.kelasId,
-                  mapelId: processedItem.mapelId,
-                  guruId: processedItem.guruId || '',
-                  statusKehadiran: processedItem.statusKehadiran || 'hadir',
-                  catatan: processedItem.catatan || '',
-                  diinputOleh: processedItem.diinputOleh || 'system',
-                }
-              });
-            }
-          } else {
-            let actualTableName = table;
-            if (table === "guruMengampu") actualTableName = "guru_mengampu";
-
-            await tx.execute(sql.raw(`DELETE FROM \`${actualTableName}\``));
-
-            if (uniqueData.length > 0) {
-              // Chunk inserts to avoid query size limits
-              const chunkSize = 50;
-              for (let i = 0; i < uniqueData.length; i += chunkSize) {
-                const chunk = uniqueData.slice(i, i + chunkSize).map((item: any) => {
-                  let processedItem = item;
-                  if (table === "sekolah" && !processedItem.id) {
-                    processedItem = { ...processedItem, id: "sek-1" };
-                  }
-                  return processedItem;
-                });
-                await tx.insert(tableSchema).values(chunk);
-              }
-            }
-          }
-
-          await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
-        });
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
       });
 
+      broadcastAllData();
       res.json({ success: true });
     } catch (error: any) {
-      console.error("Sync error:", error);
+      console.error(`Error in batch save ${table}:`, error);
       res.status(500).json({ success: false, error: error.message });
     }
+  }
+
+  // Batch / Entity Save Routes
+  app.post("/api/users/batch", (req, res) => handleBatchSave("users", req.body, req, res));
+  app.post("/api/jurusan/batch", (req, res) => handleBatchSave("jurusan", req.body, req, res));
+  app.post("/api/mapel/batch", (req, res) => handleBatchSave("mapel", req.body, req, res));
+  app.post("/api/kelas/batch", (req, res) => handleBatchSave("kelas", req.body, req, res));
+  app.post("/api/siswa/batch", (req, res) => handleBatchSave("siswa", req.body, req, res));
+  app.post("/api/guru/batch", (req, res) => handleBatchSave("guru", req.body, req, res));
+  app.post("/api/guru-mengampu/batch", (req, res) => handleBatchSave("guruMengampu", req.body, req, res));
+
+  // Legacy sync route fallback
+  app.post("/api/sync/:table", express.json({ limit: "10mb" }), (req, res) => {
+    const { table } = req.params;
+    if (table === "jurnal") {
+      return res.json({ success: true, message: "Use /api/jurnal for realtime journal updates" });
+    }
+    return handleBatchSave(table, req.body, req, res);
   });
 
   // Vite middleware for development

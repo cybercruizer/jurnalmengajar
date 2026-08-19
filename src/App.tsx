@@ -17,12 +17,8 @@ import CetakLaporanModal from './components/CetakLaporanModal';
 import { Toast, ToastContainer } from './components/ToastNotification';
 
 export default function App() {
-  
-  // -------------------------------------------------------------
-  // DATABASE STORAGE SYNCS (localStorage with initialSeed fallbacks)
-  // -------------------------------------------------------------
-  const [installed, setInstalled] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('jurnal_active_user');
@@ -49,23 +45,27 @@ export default function App() {
     }, 4000);
   };
 
+  const applyDatabaseData = (dbData: any) => {
+    if (!dbData) return;
+    if (dbData.sekolah) {
+      setSchoolInfo(prev => ({ ...initialSekolah, ...prev, ...dbData.sekolah }));
+    }
+    if (Array.isArray(dbData.users) && dbData.users.length > 0) setUsers(dbData.users);
+    if (Array.isArray(dbData.jurusan)) setJurusan(dbData.jurusan);
+    if (Array.isArray(dbData.mapel)) setMapel(dbData.mapel);
+    if (Array.isArray(dbData.kelas)) setKelas(dbData.kelas);
+    if (Array.isArray(dbData.siswa)) setSiswa(dbData.siswa);
+    if (Array.isArray(dbData.guru)) setGuru(dbData.guru);
+    if (Array.isArray(dbData.guruMengampu)) setGuruMengampu(dbData.guruMengampu);
+    if (Array.isArray(dbData.jurnal)) setJurnals(dbData.jurnal);
+  };
+
   const fetchDataFromDb = async () => {
     try {
       const res = await fetch('/api/data');
       const result = await res.json();
-      if (result.success) {
-        const dbData = result.data;
-        if (dbData.sekolah) {
-          setSchoolInfo(prev => ({ ...initialSekolah, ...prev, ...dbData.sekolah }));
-        }
-        if (Array.isArray(dbData.users)) setUsers(dbData.users);
-        if (Array.isArray(dbData.jurusan)) setJurusan(dbData.jurusan);
-        if (Array.isArray(dbData.mapel)) setMapel(dbData.mapel);
-        if (Array.isArray(dbData.kelas)) setKelas(dbData.kelas);
-        if (Array.isArray(dbData.siswa)) setSiswa(dbData.siswa);
-        if (Array.isArray(dbData.guru)) setGuru(dbData.guru);
-        if (Array.isArray(dbData.guruMengampu)) setGuruMengampu(dbData.guruMengampu);
-        if (Array.isArray(dbData.jurnal)) setJurnals(dbData.jurnal);
+      if (result.success && result.data) {
+        applyDatabaseData(result.data);
       }
     } catch (err) {
       console.error('Error fetching from DB:', err);
@@ -74,12 +74,50 @@ export default function App() {
     }
   };
 
+  // Real-time Server-Sent Events (SSE) Listener
   useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
+
+    const setupSSE = () => {
+      eventSource = new EventSource('/api/events');
+
+      eventSource.onopen = () => {
+        setIsRealtimeConnected(true);
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          if (!event.data) return;
+          const parsed = JSON.parse(event.data);
+          if (parsed.type === 'connected') {
+            setIsRealtimeConnected(true);
+          } else if (parsed.type === 'realtime_update' && parsed.data) {
+            setIsRealtimeConnected(true);
+            applyDatabaseData(parsed.data);
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error('Error processing realtime event:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsRealtimeConnected(false);
+        if (eventSource) {
+          eventSource.close();
+        }
+        reconnectTimeout = setTimeout(setupSSE, 4000);
+      };
+    };
+
     fetchDataFromDb();
-    const interval = setInterval(() => {
-      fetchDataFromDb();
-    }, 10000); // Automatic sync every 10s
-    return () => clearInterval(interval);
+    setupSSE();
+
+    return () => {
+      if (eventSource) eventSource.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -87,75 +125,119 @@ export default function App() {
     document.title = `${appName} - ${schoolInfo.nama}`;
   }, [schoolInfo]);
 
-  const syncToDb = (tableName: string, data: any) => {
-    fetch(`/api/sync/${tableName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).catch(err => console.error("Sync error:", err));
+  // -------------------------------------------------------------
+  // REAL-TIME MUTATION HANDLERS (No full wipes, direct database sync)
+  // -------------------------------------------------------------
+  const handleUpdateSchoolInfo = async (newSchool: Sekolah) => {
+    setSchoolInfo(newSchool);
+    try {
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSchool)
+      });
+      showToast('Identitas sekolah berhasil diperbarui secara realtime!', 'success');
+    } catch (err) {
+      showToast('Gagal menyimpan identitas sekolah ke database.', 'error');
+    }
   };
 
-  // Save changes to localStorage and DB whenever state arrays update
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_school_info', JSON.stringify(schoolInfo));
-    syncToDb('sekolah', [schoolInfo]);
-  }, [schoolInfo, loading]);
+  const handleUpdateUsers = async (newUsers: User[]) => {
+    setUsers(newUsers);
+    try {
+      await fetch('/api/users/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUsers)
+      });
+    } catch (err) {
+      console.error('Error updating users:', err);
+    }
+  };
 
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_users', JSON.stringify(users));
-    syncToDb('users', users);
-  }, [users, loading]);
+  const handleUpdateJurusan = async (newJurusan: Jurusan[]) => {
+    setJurusan(newJurusan);
+    try {
+      await fetch('/api/jurusan/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newJurusan)
+      });
+    } catch (err) {
+      console.error('Error updating jurusan:', err);
+    }
+  };
 
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_jurusan', JSON.stringify(jurusan));
-    syncToDb('jurusan', jurusan);
-  }, [jurusan, loading]);
+  const handleUpdateMapel = async (newMapel: Mapel[]) => {
+    setMapel(newMapel);
+    try {
+      await fetch('/api/mapel/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMapel)
+      });
+    } catch (err) {
+      console.error('Error updating mapel:', err);
+    }
+  };
 
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_mapel', JSON.stringify(mapel));
-    syncToDb('mapel', mapel);
-  }, [mapel, loading]);
+  const handleUpdateKelas = async (newKelas: Kelas[]) => {
+    setKelas(newKelas);
+    try {
+      await fetch('/api/kelas/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newKelas)
+      });
+    } catch (err) {
+      console.error('Error updating kelas:', err);
+    }
+  };
 
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_kelas', JSON.stringify(kelas));
-    syncToDb('kelas', kelas);
-  }, [kelas, loading]);
+  const handleUpdateSiswa = async (newSiswa: Siswa[]) => {
+    setSiswa(newSiswa);
+    try {
+      await fetch('/api/siswa/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSiswa)
+      });
+    } catch (err) {
+      console.error('Error updating siswa:', err);
+    }
+  };
 
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_siswa', JSON.stringify(siswa));
-    syncToDb('siswa', siswa);
-  }, [siswa, loading]);
+  const handleUpdateGuru = async (newGuru: Guru[]) => {
+    setGuru(newGuru);
+    try {
+      await fetch('/api/guru/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGuru)
+      });
+    } catch (err) {
+      console.error('Error updating guru:', err);
+    }
+  };
 
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_guru', JSON.stringify(guru));
-    syncToDb('guru', guru);
-  }, [guru, loading]);
-
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_mengampu', JSON.stringify(guruMengampu));
-    syncToDb('guruMengampu', guruMengampu);
-  }, [guruMengampu, loading]);
-
-  useEffect(() => {
-    if (loading) return;
-    localStorage.setItem('jurnal_db_jurnal_entries', JSON.stringify(jurnals));
-    syncToDb('jurnal', jurnals);
-  }, [jurnals, loading]);
+  const handleUpdateGuruMengampu = async (newGM: GuruMengampu[]) => {
+    setGuruMengampu(newGM);
+    try {
+      await fetch('/api/guru-mengampu/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGM)
+      });
+    } catch (err) {
+      console.error('Error updating guru mengampu:', err);
+    }
+  };
 
   // -------------------------------------------------------------
   // ACTIVE SUBMENU NAVIGATION STATE
   // -------------------------------------------------------------
   const [activeTab, setActiveTab] = useState<string>('');
 
-  // Set default active view tab upon role-based authorization
   useEffect(() => {
     if (!currentUser) {
       setActiveTab('');
@@ -220,7 +302,7 @@ export default function App() {
         if (Array.isArray(result.jurnals)) {
           setJurnals(result.jurnals);
         }
-        showToast('Jurnal mengajar berhasil disimpan & dipublikasikan!', 'success');
+        showToast('Jurnal mengajar berhasil disimpan & dipublikasikan secara realtime!', 'success');
       } else {
         showToast('Gagal menyimpan ke database server: ' + (result.error || result.message || 'Error'), 'error');
       }
@@ -262,7 +344,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
         <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="mt-4 text-slate-500 font-medium tracking-wide">Memuat Data Database...</p>
+        <p className="mt-4 text-slate-500 font-medium tracking-wide">Memuat Data Database Realtime...</p>
       </div>
     );
   }
@@ -288,6 +370,7 @@ export default function App() {
           schoolInfo={schoolInfo}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          isRealtimeConnected={isRealtimeConnected}
         >
           {/* Display panel based on role */}
           {currentUser.role === 'siswa' && loggedSiswa && (
@@ -300,7 +383,7 @@ export default function App() {
               jurnals={jurnals}
               onAddJurnal={handleAddJurnal}
               onDeleteJurnal={handleDeleteJurnal}
-              activeSubTab={activeTab} // 'siswa-input' or 'siswa-riwayat'
+              activeSubTab={activeTab}
               showToast={showToast}
             />
           )}
@@ -314,29 +397,29 @@ export default function App() {
               jurnals={jurnals}
               schoolInfo={schoolInfo}
               onPrintPreview={(type, classId, date) => setPrintModalParams({ type, classId, filterDate: date })}
-              activeSubTab={activeTab} // 'guru-dashboard' or 'guru-rekap'
+              activeSubTab={activeTab}
             />
           )}
 
           {currentUser.role === 'admin' && (
             <AdminPanel
               users={users}
-              onUpdateUsers={setUsers}
+              onUpdateUsers={handleUpdateUsers}
               jurusan={jurusan}
-              onUpdateJurusan={setJurusan}
+              onUpdateJurusan={handleUpdateJurusan}
               mapel={mapel}
-              onUpdateMapel={setMapel}
+              onUpdateMapel={handleUpdateMapel}
               kelas={kelas}
-              onUpdateKelas={setKelas}
+              onUpdateKelas={handleUpdateKelas}
               siswa={siswa}
-              onUpdateSiswa={setSiswa}
+              onUpdateSiswa={handleUpdateSiswa}
               guru={guru}
-              onUpdateGuru={setGuru}
+              onUpdateGuru={handleUpdateGuru}
               guruMengampu={guruMengampu}
-              onUpdateGuruMengampu={setGuruMengampu}
+              onUpdateGuruMengampu={handleUpdateGuruMengampu}
               schoolInfo={schoolInfo}
-              onUpdateSchoolInfo={setSchoolInfo}
-              activeSubTab={activeTab} // tracks sub-managers
+              onUpdateSchoolInfo={handleUpdateSchoolInfo}
+              activeSubTab={activeTab}
               jurnals={jurnals}
               onAddJurnal={handleAddJurnal}
               onDeleteJurnal={handleDeleteJurnal}

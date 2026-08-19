@@ -20,6 +20,7 @@ interface ShapeRexLayoutProps {
   activeTab: string;
   setActiveTab: (tabId: string) => void;
   children: React.ReactNode;
+  isRealtimeConnected?: boolean;
 }
 
 export default function ShapeRexLayout({ 
@@ -28,7 +29,8 @@ export default function ShapeRexLayout({
   schoolInfo, 
   activeTab, 
   setActiveTab, 
-  children 
+  children,
+  isRealtimeConnected = true
 }: ShapeRexLayoutProps) {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
@@ -447,6 +449,15 @@ export default function ShapeRexLayout({
               <span className="text-slate-300">|</span>
               <Clock className="w-4 h-4 text-indigo-500" />
               <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50/70 border border-indigo-100/30 px-2 py-0.5 rounded-md">{currentTime || '00:00:00'}</span>
+              <span className="text-slate-300">|</span>
+              <div className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 ${
+                isRealtimeConnected 
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${isRealtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span>{isRealtimeConnected ? 'Realtime Aktif' : 'Menghubungkan...'}</span>
+              </div>
             </div>
 
             {/* Right User Profiler Panel */}
