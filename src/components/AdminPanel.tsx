@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   User, Jurusan, Mapel, Kelas, Siswa, Guru, GuruMengampu, Sekolah, UserRole, Jurnal 
 } from '../types';
@@ -50,6 +50,51 @@ export default function AdminPanel({
   onOpenPrintModal,
   showToast
 }: AdminPanelProps) {
+
+  // Ascending sorted lists for all entities and select forms
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => 
+      (a.name || a.username).localeCompare(b.name || b.username, 'id', { numeric: true, sensitivity: 'base' })
+    );
+  }, [users]);
+
+  const sortedSiswa = useMemo(() => {
+    return [...siswa].sort((a, b) => 
+      a.nama.localeCompare(b.nama, 'id', { numeric: true, sensitivity: 'base' })
+    );
+  }, [siswa]);
+
+  const sortedKelas = useMemo(() => {
+    return [...kelas].sort((a, b) => 
+      a.nama.localeCompare(b.nama, 'id', { numeric: true, sensitivity: 'base' })
+    );
+  }, [kelas]);
+
+  const sortedGuru = useMemo(() => {
+    return [...guru].sort((a, b) => 
+      a.nama.localeCompare(b.nama, 'id', { numeric: true, sensitivity: 'base' })
+    );
+  }, [guru]);
+
+  const sortedMapel = useMemo(() => {
+    return [...mapel].sort((a, b) => 
+      a.nama.localeCompare(b.nama, 'id', { numeric: true, sensitivity: 'base' })
+    );
+  }, [mapel]);
+
+  const sortedJurusan = useMemo(() => {
+    return [...jurusan].sort((a, b) => 
+      a.nama.localeCompare(b.nama, 'id', { numeric: true, sensitivity: 'base' })
+    );
+  }, [jurusan]);
+
+  // Non-reactive local form state for School Identity & Settings
+  const [schoolFormData, setSchoolFormData] = useState<Sekolah>(schoolInfo);
+
+  // Synchronize when schoolInfo is updated or initially loaded from database
+  React.useEffect(() => {
+    setSchoolFormData(schoolInfo);
+  }, [schoolInfo]);
 
   // Notification states
   const [adminNotification, setAdminNotification] = useState<string>('');
@@ -168,8 +213,8 @@ export default function AdminPanel({
     const dayName = indonesianDays[d.getDay()] || 'Senin';
     setInputJurnalHari(dayName);
     
-    setInputJurnalKelasId(preferredKelasId || (kelas.length > 0 ? kelas[0].id : ''));
-    setInputJurnalMapelId(mapel.length > 0 ? mapel[0].id : '');
+    setInputJurnalKelasId(preferredKelasId || (sortedKelas.length > 0 ? sortedKelas[0].id : ''));
+    setInputJurnalMapelId(sortedMapel.length > 0 ? sortedMapel[0].id : '');
     setInputJurnalGuruIds([]);
     setInputJurnalJamMulai(1);
     setInputJurnalJamSelesai(2);
@@ -267,24 +312,24 @@ export default function AdminPanel({
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
             const optimizedUrl = canvas.toDataURL('image/png');
-            onUpdateSchoolInfo({
-              ...schoolInfo,
+            setSchoolFormData(prev => ({
+              ...prev,
               logoUrl: optimizedUrl
-            });
+            }));
           } else {
-            onUpdateSchoolInfo({
-              ...schoolInfo,
+            setSchoolFormData(prev => ({
+              ...prev,
               logoUrl: rawUrl
-            });
+            }));
           }
-          showBannerNotice('Logo sekolah berhasil diperbarui!');
+          showBannerNotice('Logo dipilih! Klik "Simpan Identitas Kop Sekolah" untuk menyimpan ke database.');
         };
         img.onerror = () => {
-          onUpdateSchoolInfo({
-            ...schoolInfo,
+          setSchoolFormData(prev => ({
+            ...prev,
             logoUrl: rawUrl
-          });
-          showBannerNotice('Logo sekolah berhasil diperbarui!');
+          }));
+          showBannerNotice('Logo dipilih! Klik "Simpan Identitas Kop Sekolah" untuk menyimpan ke database.');
         };
         img.src = rawUrl;
       }
@@ -577,7 +622,8 @@ export default function AdminPanel({
   // 8. DATA SEKOLAH
   const handleUpdateSchool = (e: React.FormEvent) => {
     e.preventDefault();
-    showBannerNotice('Identitas sekolah diperbarui secara global!');
+    onUpdateSchoolInfo(schoolFormData);
+    showBannerNotice('Identitas dan logo sekolah berhasil disimpan ke database!');
   };
 
   // -----------------------------------------------------------------
@@ -1229,7 +1275,7 @@ sis_ahmad,Ahmad Yani,siswa,siswa123,sis-1
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {users.map((u) => (
+                    {sortedUsers.map((u) => (
                       <tr key={u.id} className="hover:bg-slate-50/50">
                         <td className="px-3 py-3">
                           <p className="font-bold text-slate-800">{u.name}</p>
@@ -1336,7 +1382,7 @@ sis_ahmad,Ahmad Yani,siswa,siswa123,sis-1
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {jurusan.map((j) => (
+                    {sortedJurusan.map((j) => (
                       <tr key={j.id} className="hover:bg-slate-50/50">
                         <td className="px-3 py-3.5">
                           <span className="font-extrabold text-slate-900 bg-slate-100 border px-2.5 py-1 rounded">
@@ -1398,7 +1444,7 @@ sis_ahmad,Ahmad Yani,siswa,siswa123,sis-1
                     onChange={(e) => setKelasJurusanId(e.target.value)}
                     className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
-                    {jurusan.map((j) => (
+                    {sortedJurusan.map((j) => (
                       <option key={j.id} value={j.id}>{j.nama} ({j.singkatan})</option>
                     ))}
                   </select>
@@ -1440,7 +1486,7 @@ sis_ahmad,Ahmad Yani,siswa,siswa123,sis-1
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {kelas.map((k) => {
+                    {sortedKelas.map((k) => {
                       const jurItem = jurusan.find(j => j.id === k.jurusanId);
                       return (
                         <tr key={k.id} className="hover:bg-slate-50/50">
@@ -1594,7 +1640,7 @@ COMMON-4,Bahasa Inggris
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {mapel.map((m) => (
+                    {sortedMapel.map((m) => (
                       <tr key={m.id} className="hover:bg-slate-50/50">
                         <td className="px-3 py-3.5 font-bold font-mono text-slate-800">{m.kode}</td>
                         <td className="px-4 py-3.5 font-bold text-slate-700">{m.nama}</td>
@@ -1665,7 +1711,7 @@ COMMON-4,Bahasa Inggris
                         onChange={(e) => setSiswaKelasId(e.target.value)}
                         className="block w-full px-1.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                       >
-                        {kelas.map((k) => (
+                        {sortedKelas.map((k) => (
                           <option key={k.id} value={k.id}>{k.nama}</option>
                         ))}
                       </select>
@@ -1772,7 +1818,7 @@ nis,nama,kelas,is_ketua
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {siswa.map((s) => {
+                    {sortedSiswa.map((s) => {
                       const matchingClass = kelas.find(k => k.id === s.kelasId);
                       return (
                         <tr key={s.id} className="hover:bg-slate-50/50">
@@ -1936,7 +1982,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {guru.map((g) => (
+                    {sortedGuru.map((g) => (
                       <tr key={g.id} className="hover:bg-slate-50/50">
                         <td className="px-3 py-3.5 font-mono text-slate-500 font-bold">{g.kodeGuru || 'Belum Terisi'}</td>
                         <td className="px-3 py-3.5 font-bold text-slate-800">{g.nama}</td>
@@ -1983,7 +2029,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                     className="block w-full px-2.5 py-2.5 bg-slate-50 border border-slate-210 rounded-xl text-slate-85 text-sm focus:outline-none"
                   >
                     <option value="">-- pilih guru --</option>
-                    {guru.map((g) => (
+                    {sortedGuru.map((g) => (
                       <option key={g.id} value={g.id}>{g.nama} {g.kodeGuru ? `(${g.kodeGuru})` : ''}</option>
                     ))}
                   </select>
@@ -2003,7 +2049,7 @@ KGR-010,Siti Zubaidah, S.Pd.
 
                   {/* Filter & Select All / Deselect All Controls */}
                   <div className="space-y-2 mb-2">
-                    {mapel.length > 5 && (
+                    {sortedMapel.length > 5 && (
                       <div className="relative">
                         <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
                         <input
@@ -2020,7 +2066,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                         <button
                           type="button"
                           onClick={() => {
-                            const filtered = mapel
+                            const filtered = sortedMapel
                               .filter(m => m.nama.toLowerCase().includes(ampuSearchMapel.toLowerCase()) || m.kode.toLowerCase().includes(ampuSearchMapel.toLowerCase()))
                               .map(m => m.id);
                             setAmpuMapelIds(Array.from(new Set([...ampuMapelIds, ...filtered])));
@@ -2038,14 +2084,14 @@ KGR-010,Siti Zubaidah, S.Pd.
                           Batal Pilih
                         </button>
                       </div>
-                      <span className="text-slate-400 text-[10px]">Total: {mapel.length} mapel</span>
+                      <span className="text-slate-400 text-[10px]">Total: {sortedMapel.length} mapel</span>
                     </div>
                   </div>
 
                   {/* Checklist of Mapel */}
                   <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70 max-h-60 overflow-y-auto space-y-1.5">
                     {(() => {
-                      const filteredMapel = mapel.filter(m => 
+                      const filteredMapel = sortedMapel.filter(m => 
                         m.nama.toLowerCase().includes(ampuSearchMapel.toLowerCase()) || 
                         m.kode.toLowerCase().includes(ampuSearchMapel.toLowerCase())
                       );
@@ -2643,7 +2689,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                           className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white outline-none font-semibold cursor-pointer"
                         >
                           <option value="">-- Pilih Kelas --</option>
-                          {kelas.map((k) => (
+                          {sortedKelas.map((k) => (
                             <option key={k.id} value={k.id}>{k.nama}</option>
                           ))}
                         </select>
@@ -2701,7 +2747,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                           className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white outline-none font-semibold cursor-pointer"
                         >
                           <option value="">-- Pilih Mata Pelajaran --</option>
-                          {mapel.map((m) => (
+                          {sortedMapel.map((m) => (
                             <option key={m.id} value={m.id}>{m.nama} ({m.kode})</option>
                           ))}
                         </select>
@@ -2711,7 +2757,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Guru Pengampu (Bisa Pilih Lebih Dari 1)</label>
                         <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 max-h-36 overflow-y-auto space-y-1.5">
-                          {guru.map((g) => {
+                          {sortedGuru.map((g) => {
                             const isChecked = inputJurnalGuruIds.includes(g.id);
                             return (
                               <label 
@@ -2952,7 +2998,7 @@ KGR-010,Siti Zubaidah, S.Pd.
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-md">
             <h3 className="text-sm font-bold text-slate-800 tracking-wider mb-5 flex items-center gap-1.5 border-b border-slate-100 pb-3 uppercase">
               <School className="w-4 h-4 text-orange-500" />
-              Identitas & Kop Resmi {schoolInfo.nama}
+              Identitas & Kop Resmi {schoolFormData.nama || schoolInfo.nama}
             </h3>
 
             <form onSubmit={handleUpdateSchool} className="space-y-5 max-w-2xl text-left">
@@ -2965,23 +3011,23 @@ KGR-010,Siti Zubaidah, S.Pd.
                 <input
                   type="text"
                   required
-                  value={schoolInfo.namaAplikasi || 'JurnalKu SMK'}
-                  onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, namaAplikasi: e.target.value })}
+                  value={schoolFormData.namaAplikasi || 'JurnalKu SMK'}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, namaAplikasi: e.target.value })}
                   className="block w-full px-4 py-2.5 bg-white border border-indigo-200 rounded-xl text-slate-850 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   placeholder="Misal: JurnalKu SMK"
                 />
                 <p className="text-[11px] text-slate-500 font-medium">
-                  Nama aplikasi ini secara otomatis digunakan pada logo/brand sidebar navigasi, header titlebar, dan judul tab browser.
+                  Nama aplikasi ini secara otomatis digunakan pada logo/brand sidebar navigasi, header titlebar, dan judul tab browser setelah disimpan.
                 </p>
               </div>
 
               {/* UPLOAD LOGO SEKOLAH */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-dashed border-slate-250 flex flex-col md:flex-row items-center gap-5">
                 <div className="shrink-0">
-                  {schoolInfo.logoUrl ? (
+                  {schoolFormData.logoUrl ? (
                     <div className="relative group w-24 h-24 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex items-center justify-center">
                       <img 
-                        src={schoolInfo.logoUrl} 
+                        src={schoolFormData.logoUrl} 
                         alt="Preview Logo" 
                         className="w-full h-full object-contain p-2"
                         referrerPolicy="no-referrer"
@@ -2989,8 +3035,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                       <button
                         type="button"
                         onClick={() => {
-                          onUpdateSchoolInfo({ ...schoolInfo, logoUrl: undefined });
-                          showBannerNotice('Logo sekolah dihapus.');
+                          setSchoolFormData(prev => ({ ...prev, logoUrl: undefined }));
+                          showBannerNotice('Logo dihapus dari form. Klik tombol simpan untuk menerapkan ke database.');
                         }}
                         className="absolute inset-0 bg-black/55 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold text-xs gap-1 cursor-pointer"
                       >
@@ -3011,7 +3057,7 @@ KGR-010,Siti Zubaidah, S.Pd.
                     Logo Resmi Sekolah (Tampil di Kop Surat)
                   </label>
                   <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-                    Unggah lambang sekolah resmi dalam format PNG/JPG/SVG. File ini akan otomatis ditumpangkan sebagai lambang resmi di Kop Surat laporan jurnal harian, mingguan, dan bulanan.
+                    Unggah lambang sekolah resmi dalam format PNG/JPG/SVG. Klik <strong>Simpan Identitas Kop Sekolah</strong> untuk menyimpan ke database.
                   </p>
 
                   <div
@@ -3061,8 +3107,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.nama}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nama: e.target.value })}
+                    value={schoolFormData.nama}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, nama: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:outline-none"
                   />
                 </div>
@@ -3071,8 +3117,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.npsn}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, npsn: e.target.value })}
+                    value={schoolFormData.npsn}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, npsn: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
@@ -3083,8 +3129,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                 <input
                   type="text"
                   required
-                  value={schoolInfo.alamat}
-                  onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, alamat: e.target.value })}
+                  value={schoolFormData.alamat}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, alamat: e.target.value })}
                   className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                 />
               </div>
@@ -3095,8 +3141,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.kepalaSekolah}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, kepalaSekolah: e.target.value })}
+                    value={schoolFormData.kepalaSekolah}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, kepalaSekolah: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
@@ -3105,8 +3151,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.nbmKepalaSekolah}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nbmKepalaSekolah: e.target.value })}
+                    value={schoolFormData.nbmKepalaSekolah}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, nbmKepalaSekolah: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
@@ -3118,8 +3164,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.wakaKurikulum}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, wakaKurikulum: e.target.value })}
+                    value={schoolFormData.wakaKurikulum}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, wakaKurikulum: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
@@ -3128,8 +3174,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.nbmWakaKurikulum}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, nbmWakaKurikulum: e.target.value })}
+                    value={schoolFormData.nbmWakaKurikulum}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, nbmWakaKurikulum: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none"
                   />
                 </div>
@@ -3141,8 +3187,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="text"
                     required
-                    value={schoolInfo.website}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, website: e.target.value })}
+                    value={schoolFormData.website}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, website: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs"
                   />
                 </div>
@@ -3151,8 +3197,8 @@ KGR-010,Siti Zubaidah, S.Pd.
                   <input
                     type="email"
                     required
-                    value={schoolInfo.email}
-                    onChange={(e) => onUpdateSchoolInfo({ ...schoolInfo, email: e.target.value })}
+                    value={schoolFormData.email}
+                    onChange={(e) => setSchoolFormData({ ...schoolFormData, email: e.target.value })}
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs"
                   />
                 </div>

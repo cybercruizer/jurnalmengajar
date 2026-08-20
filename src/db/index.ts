@@ -112,23 +112,34 @@ export async function ensureTablesExist(poolConn: mysql.Pool) {
 
     await poolConn.query(`
       CREATE TABLE IF NOT EXISTS \`sekolah\` (
-        \`id\` varchar(36) PRIMARY KEY,
-        \`nama\` varchar(150) NOT NULL,
+        \`id\` varchar(100) PRIMARY KEY,
+        \`nama\` varchar(200) NOT NULL,
         \`npsn\` varchar(50) NOT NULL,
         \`alamat\` text NOT NULL,
-        \`kepala_sekolah\` varchar(100) NOT NULL,
+        \`kepala_sekolah\` varchar(150) NOT NULL,
         \`nbm_kepala_sekolah\` varchar(50) NOT NULL,
-        \`waka_kurikulum\` varchar(100) NOT NULL,
+        \`waka_kurikulum\` varchar(150) NOT NULL,
         \`nbm_waka_kurikulum\` varchar(50) NOT NULL,
-        \`website\` varchar(100) NOT NULL,
-        \`email\` varchar(100) NOT NULL,
-        \`logo_url\` text,
-        \`nama_aplikasi\` varchar(100)
+        \`website\` varchar(150) NOT NULL,
+        \`email\` varchar(150) NOT NULL,
+        \`logo_url\` longtext,
+        \`nama_aplikasi\` varchar(150)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
     try {
-      await poolConn.query("ALTER TABLE `sekolah` ADD COLUMN `nama_aplikasi` varchar(100)");
+      await poolConn.query("ALTER TABLE `sekolah` ADD COLUMN `nama_aplikasi` varchar(150)");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `nama` VARCHAR(200) NOT NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `logo_url` LONGTEXT NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `nama_aplikasi` VARCHAR(150) NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `kepala_sekolah` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `waka_kurikulum` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `website` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `sekolah` MODIFY COLUMN `email` VARCHAR(150) NOT NULL");
     } catch (e) {}
 
     try {
