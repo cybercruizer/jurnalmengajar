@@ -145,91 +145,126 @@ export default function App() {
   const handleUpdateUsers = async (newUsers: User[]) => {
     setUsers(newUsers);
     try {
-      await fetch('/api/users/batch', {
+      const res = await fetch('/api/users/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUsers)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan pengguna ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating users:', err);
+      showToast('Gagal terhubung ke database untuk menyimpan akun pengguna.', 'error');
     }
   };
 
   const handleUpdateJurusan = async (newJurusan: Jurusan[]) => {
     setJurusan(newJurusan);
     try {
-      await fetch('/api/jurusan/batch', {
+      const res = await fetch('/api/jurusan/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newJurusan)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan jurusan ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating jurusan:', err);
+      showToast('Gagal menyimpan jurusan ke database.', 'error');
     }
   };
 
   const handleUpdateMapel = async (newMapel: Mapel[]) => {
     setMapel(newMapel);
     try {
-      await fetch('/api/mapel/batch', {
+      const res = await fetch('/api/mapel/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMapel)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan mapel ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating mapel:', err);
+      showToast('Gagal menyimpan mapel ke database.', 'error');
     }
   };
 
   const handleUpdateKelas = async (newKelas: Kelas[]) => {
     setKelas(newKelas);
     try {
-      await fetch('/api/kelas/batch', {
+      const res = await fetch('/api/kelas/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newKelas)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan kelas ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating kelas:', err);
+      showToast('Gagal menyimpan kelas ke database.', 'error');
     }
   };
 
   const handleUpdateSiswa = async (newSiswa: Siswa[]) => {
     setSiswa(newSiswa);
     try {
-      await fetch('/api/siswa/batch', {
+      const res = await fetch('/api/siswa/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSiswa)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan data siswa ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating siswa:', err);
+      showToast('Gagal menyimpan data siswa ke database.', 'error');
     }
   };
 
   const handleUpdateGuru = async (newGuru: Guru[]) => {
     setGuru(newGuru);
     try {
-      await fetch('/api/guru/batch', {
+      const res = await fetch('/api/guru/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newGuru)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan data guru ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating guru:', err);
+      showToast('Gagal menyimpan data guru ke database.', 'error');
     }
   };
 
   const handleUpdateGuruMengampu = async (newGM: GuruMengampu[]) => {
     setGuruMengampu(newGM);
     try {
-      await fetch('/api/guru-mengampu/batch', {
+      const res = await fetch('/api/guru-mengampu/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newGM)
       });
-    } catch (err) {
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || data.error || 'Gagal menyimpan guru mengampu ke database', 'error');
+      }
+    } catch (err: any) {
       console.error('Error updating guru mengampu:', err);
+      showToast('Gagal menyimpan guru mengampu ke database.', 'error');
     }
   };
 

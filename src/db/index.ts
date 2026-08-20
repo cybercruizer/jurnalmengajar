@@ -147,6 +147,44 @@ export async function ensureTablesExist(poolConn: mysql.Pool) {
     } catch (e) {}
 
     try {
+      await poolConn.query("ALTER TABLE `siswa` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `siswa` MODIFY COLUMN `nama` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `siswa` MODIFY COLUMN `nis` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `siswa` MODIFY COLUMN `kelas_id` VARCHAR(100) NOT NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `users` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `users` MODIFY COLUMN `name` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `users` MODIFY COLUMN `username` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `users` MODIFY COLUMN `reference_id` VARCHAR(100) NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `kelas` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `kelas` MODIFY COLUMN `nama` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `kelas` MODIFY COLUMN `jurusan_id` VARCHAR(100) NOT NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `guru` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `guru` MODIFY COLUMN `nama` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `guru` MODIFY COLUMN `kode_guru` VARCHAR(100) NOT NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `jurusan` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurusan` MODIFY COLUMN `nama` VARCHAR(150) NOT NULL");
+      await poolConn.query("ALTER TABLE `jurusan` MODIFY COLUMN `singkatan` VARCHAR(50) NOT NULL");
+    } catch (e) {}
+
+    try {
+      await poolConn.query("ALTER TABLE `mapel` MODIFY COLUMN `id` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `mapel` MODIFY COLUMN `kode` VARCHAR(100) NOT NULL");
+      await poolConn.query("ALTER TABLE `mapel` MODIFY COLUMN `nama` VARCHAR(150) NOT NULL");
+    } catch (e) {}
+
+    try {
       await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `kelas_id` VARCHAR(255) NULL");
       await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `guru_id` VARCHAR(100) NOT NULL");
       await poolConn.query("ALTER TABLE `guru_mengampu` MODIFY COLUMN `mapel_id` VARCHAR(100) NOT NULL");

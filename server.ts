@@ -291,16 +291,16 @@ async function startServer() {
       const { sql, desc } = await import("drizzle-orm");
 
       const processedEntry = {
-        id: entry.id,
-        hari: entry.hari || '',
-        tanggal: entry.tanggal || '',
-        jamKe: entry.jamKe || '',
-        kelasId: entry.kelasId,
-        mapelId: entry.mapelId,
-        guruId: entry.guruId || '',
-        statusKehadiran: entry.statusKehadiran || 'hadir',
-        catatan: entry.catatan || '',
-        diinputOleh: entry.diinputOleh || 'system',
+        id: String(entry.id),
+        hari: String(entry.hari || ''),
+        tanggal: String(entry.tanggal || ''),
+        jamKe: String(entry.jamKe || ''),
+        kelasId: String(entry.kelasId || entry.kelas_id || ''),
+        mapelId: String(entry.mapelId || entry.mapel_id || ''),
+        guruId: String(entry.guruId || entry.guru_id || ''),
+        statusKehadiran: String(entry.statusKehadiran || entry.status_kehadiran || 'hadir'),
+        catatan: String(entry.catatan || ''),
+        diinputOleh: String(entry.diinputOleh || entry.diinput_oleh || 'system'),
         createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date()
       };
 
@@ -352,6 +352,99 @@ async function startServer() {
     }
   });
 
+  // Dedicated API Route for single Siswa CRUD (atomic, real-time)
+  app.post("/api/siswa", express.json(), async (req, res) => {
+    try {
+      const { id, nama, nis, kelasId, isKetuaKelas } = req.body;
+      if (!nama || !kelasId) {
+        return res.status(400).json({ success: false, message: "Nama dan Kelas Siswa wajib diisi." });
+      }
+
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { sql } = await import("drizzle-orm");
+
+      const siswaId = String(id || ('sis-' + Date.now()));
+      const cleanNama = String(nama).trim();
+      const cleanNis = String(nis || '').trim();
+      const cleanKelasId = String(kelasId).trim();
+      const cleanIsKetua = Boolean(isKetuaKelas);
+
+      const siswaRecord = {
+        id: siswaId,
+        nama: cleanNama,
+        nis: cleanNis,
+        kelasId: cleanKelasId,
+        isKetuaKelas: cleanIsKetua,
+      };
+
+      await db.transaction(async (tx: any) => {
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
+        await tx.insert(schema.siswa).values(siswaRecord).onDuplicateKeyUpdate({
+          set: {
+            nama: siswaRecord.nama,
+            nis: siswaRecord.nis,
+            kelasId: siswaRecord.kelasId,
+            isKetuaKelas: siswaRecord.isKetuaKelas,
+          }
+        });
+
+        // If isKetuaKelas is true, also create/upsert user account
+        if (cleanIsKetua) {
+          const usernameSiswa = 'S-' + (cleanNis.padStart(5, '0') || siswaId.slice(-5));
+          const userRecord = {
+            id: 'usr-' + siswaId.replace('sis-', ''),
+            username: usernameSiswa,
+            role: 'siswa',
+            name: cleanNama,
+            password: 'siswa123',
+            referenceId: siswaId
+          };
+          await tx.insert(schema.users).values(userRecord).onDuplicateKeyUpdate({
+            set: {
+              name: userRecord.name,
+              role: 'siswa',
+              referenceId: userRecord.referenceId,
+            }
+          });
+        }
+
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
+      });
+
+      broadcastAllData();
+      res.json({ success: true, message: "Data Siswa berhasil disimpan." });
+    } catch (error: any) {
+      console.error("Error saving single siswa:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Dedicated API Route to delete a single Siswa
+  app.delete("/api/siswa/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { getDb } = await import("./src/db/index.js");
+      const db = await getDb();
+      const schema = await import("./src/db/schema.js");
+      const { eq, sql } = await import("drizzle-orm");
+
+      await db.transaction(async (tx: any) => {
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=0`);
+        await tx.delete(schema.siswa).where(eq(schema.siswa.id, id));
+        await tx.delete(schema.users).where(eq(schema.users.referenceId, id));
+        await tx.execute(sql`SET FOREIGN_KEY_CHECKS=1`);
+      });
+
+      broadcastAllData();
+      res.json({ success: true, message: "Data Siswa berhasil dihapus." });
+    } catch (error: any) {
+      console.error("Error deleting siswa:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // API Route to update school identity in realtime
   app.post("/api/sekolah", async (req, res) => {
     try {
@@ -367,7 +460,12 @@ async function startServer() {
         npsn: schoolData.npsn || "",
         alamat: schoolData.alamat || "",
         kepalaSekolah: schoolData.kepalaSekolah || "",
-        nipKepalaSekolah: schoolData.nipKepalaSekolah || "",
+        nipKepalaSekolah: schoolData.nipKepalaSekolah || schoolData.nbmKepalaSekolah || "",
+        nbmKepalaSekolah: schoolData.nbmKepalaSekolah || "",
+        wakaKurikulum: schoolData.wakaKurikulum || "",
+        nbmWakaKurikulum: schoolData.nbmWakaKurikulum || "",
+        website: schoolData.website || "",
+        email: schoolData.email || "",
         logoUrl: schoolData.logoUrl || "",
         namaAplikasi: schoolData.namaAplikasi || "JurnalKu SMK"
       };
@@ -380,7 +478,11 @@ async function startServer() {
             npsn: entry.npsn,
             alamat: entry.alamat,
             kepalaSekolah: entry.kepalaSekolah,
-            nipKepalaSekolah: entry.nipKepalaSekolah,
+            nbmKepalaSekolah: entry.nbmKepalaSekolah,
+            wakaKurikulum: entry.wakaKurikulum,
+            nbmWakaKurikulum: entry.nbmWakaKurikulum,
+            website: entry.website,
+            email: entry.email,
             logoUrl: entry.logoUrl,
             namaAplikasi: entry.namaAplikasi,
           }
@@ -395,6 +497,66 @@ async function startServer() {
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // Normalizer helper for batch inserts to prevent bad nulls or mismatched column keys
+  function normalizeBatchItem(table: string, item: any) {
+    if (table === "siswa") {
+      return {
+        id: String(item.id || ('sis-' + Date.now())),
+        nama: String(item.nama || '').trim(),
+        nis: String(item.nis || '').trim(),
+        kelasId: String(item.kelasId || item.kelas_id || '').trim(),
+        isKetuaKelas: Boolean(item.isKetuaKelas ?? item.is_ketua_kelas ?? false),
+      };
+    }
+    if (table === "users") {
+      return {
+        id: String(item.id || ('usr-' + Date.now())),
+        username: String(item.username || '').trim(),
+        role: String(item.role || 'siswa'),
+        name: String(item.name || '').trim(),
+        password: String(item.password || '123456'),
+        referenceId: item.referenceId || item.reference_id || null,
+      };
+    }
+    if (table === "guru") {
+      return {
+        id: String(item.id || ('gur-' + Date.now())),
+        nama: String(item.nama || '').trim(),
+        kodeGuru: String(item.kodeGuru || item.kode_guru || '').trim(),
+      };
+    }
+    if (table === "kelas") {
+      return {
+        id: String(item.id || ('kls-' + Date.now())),
+        nama: String(item.nama || '').trim(),
+        jurusanId: String(item.jurusanId || item.jurusan_id || '').trim(),
+      };
+    }
+    if (table === "jurusan") {
+      return {
+        id: String(item.id || ('jur-' + Date.now())),
+        nama: String(item.nama || '').trim(),
+        singkatan: String(item.singkatan || '').trim(),
+      };
+    }
+    if (table === "mapel") {
+      return {
+        id: String(item.id || ('mapel-' + Date.now())),
+        kode: String(item.kode || '').trim(),
+        nama: String(item.nama || '').trim(),
+      };
+    }
+    if (table === "guruMengampu") {
+      return {
+        id: String(item.id || ('amp-' + Date.now())),
+        guruId: String(item.guruId || item.guru_id || '').trim(),
+        mapelId: String(item.mapelId || item.mapel_id || '').trim(),
+        kelasId: String(item.kelasId || item.kelas_id || ''),
+      };
+    }
+    return item;
+  }
 
   // Helper for batch upsert & delete without table wiping
   async function handleBatchSave(table: string, data: any[], req: express.Request, res: express.Response) {
@@ -413,11 +575,12 @@ async function startServer() {
         return res.status(400).json({ success: false, message: "Data must be an array" });
       }
 
-      // Deduplicate items
+      // Deduplicate items & normalize keys
       const uniqueData: any[] = [];
       const seenIds = new Set();
-      for (const item of data) {
-        if (item && typeof item === 'object') {
+      for (const rawItem of data) {
+        if (rawItem && typeof rawItem === 'object') {
+          const item = normalizeBatchItem(table, rawItem);
           if (item.id) {
             if (seenIds.has(item.id)) continue;
             seenIds.add(item.id);
