@@ -113,8 +113,9 @@ export default function CetakLaporanModal({
   const getGuruName = (id: string) => {
     if (!id) return 'N/A';
     return id.split(',').map(subId => {
-      const g = guru.find(x => x.id === subId.trim());
-      return g ? g.nama : 'N/A';
+      const trimmed = subId.trim();
+      const g = guru.find(x => x.id === trimmed);
+      return g ? g.nama : (trimmed || 'N/A');
     }).join(' & ');
   };
 

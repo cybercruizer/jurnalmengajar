@@ -1,20 +1,27 @@
 import React, { useState } from 'react';
-import { Guru, Kelas, Mapel, Jurnal, Sekolah } from '../types';
+import { Guru, Kelas, Mapel, Jurnal, Sekolah, GuruMengampu } from '../types';
 import { 
   Calendar, Search, Filter, Printer, FileText, CheckCircle, 
-  HelpCircle, AlertTriangle, FileSpreadsheet, Download, RefreshCw, Eye, Percent
+  HelpCircle, AlertTriangle, FileSpreadsheet, Download, RefreshCw, Eye, Percent,
+  PlusCircle, BookOpen
 } from 'lucide-react';
 import LaporanPersentaseGuru from './LaporanPersentaseGuru';
+import GuruInputJurnal from './GuruInputJurnal';
 
 interface GuruPanelProps {
   guru: Guru;
   gurus: Guru[];
   kelas: Kelas[];
   mapel: Mapel[];
+  guruMengampu?: GuruMengampu[];
   jurnals: Jurnal[];
   schoolInfo: Sekolah;
   onPrintPreview: (type: 'harian' | 'mingguan' | 'bulanan', classId: string, filterDate?: string) => void;
-  activeSubTab: string; // 'guru-dashboard' | 'guru-rekap'
+  activeSubTab: string; // 'guru-input' | 'guru-dashboard' | 'guru-rekap' | 'guru-persentase'
+  onAddJurnal?: (jurnal: Omit<Jurnal, 'id' | 'createdAt' | 'diinputOleh'>) => void;
+  onDeleteJurnal?: (id: string) => void;
+  showToast?: (message: string, type: 'success' | 'error') => void;
+  onNavigateTab?: (tabId: string) => void;
 }
 
 export default function GuruPanel({
@@ -22,10 +29,15 @@ export default function GuruPanel({
   gurus,
   kelas,
   mapel,
+  guruMengampu = [],
   jurnals,
   schoolInfo,
   onPrintPreview,
-  activeSubTab
+  activeSubTab,
+  onAddJurnal,
+  onDeleteJurnal,
+  showToast,
+  onNavigateTab
 }: GuruPanelProps) {
   
   // State for filtering
@@ -101,6 +113,24 @@ export default function GuruPanel({
     }
   };
 
+  if (activeSubTab === 'guru-input') {
+    return (
+      <GuruInputJurnal
+        guru={guru}
+        gurus={gurus}
+        kelas={kelas}
+        mapel={mapel}
+        guruMengampu={guruMengampu}
+        jurnals={jurnals}
+        schoolInfo={schoolInfo}
+        onAddJurnal={onAddJurnal || (() => {})}
+        onDeleteJurnal={onDeleteJurnal}
+        showToast={showToast}
+        onNavigateTab={onNavigateTab}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       
@@ -115,12 +145,23 @@ export default function GuruPanel({
             <h2 className="text-3xl font-black tracking-tight leading-none mb-2 font-display">{guru.nama}</h2>
             <p className="text-sm font-mono text-indigo-200 uppercase tracking-widest">KODE GURU: {guru.kodeGuru || 'Belum Terdaftar'}</p>
             <p className="text-indigo-100 text-sm mt-3 max-w-xl">
-              Gunakan panel ini untuk mereview, memvalidasi, dan mencetak laporan harian, mingguan, maupun bulanan berdasarkan input dari ketua kelas.
+              Gunakan panel ini untuk menginput jurnal mengajar harian, mereview, memvalidasi, dan mencetak laporan resmi Kurikulum Merdeka.
             </p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {onNavigateTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateTab('guru-input')}
+                className="py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Input Jurnal Mengajar</span>
+              </button>
+            )}
             <button
+              type="button"
               onClick={() => onPrintPreview('harian', selectedClassId, filterDate)}
               className="py-3 px-4 bg-white hover:bg-slate-50 text-indigo-700 font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
             >
@@ -128,6 +169,7 @@ export default function GuruPanel({
               <span>Cetak Harian</span>
             </button>
             <button
+              type="button"
               onClick={() => onPrintPreview('mingguan', selectedClassId, filterDate)}
               className="py-3 px-4 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-sm rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-2"
             >

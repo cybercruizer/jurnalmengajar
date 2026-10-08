@@ -281,7 +281,7 @@ export default function App() {
     if (currentUser.role === 'admin') {
       setActiveTab('admin-dashboard');
     } else if (currentUser.role === 'guru') {
-      setActiveTab('guru-dashboard');
+      setActiveTab('guru-input');
     } else {
       setActiveTab('siswa-input');
     }
@@ -372,7 +372,9 @@ export default function App() {
     : null;
 
   const loggedGuru = currentUser && currentUser.role === 'guru'
-    ? guru.find(g => g.id === currentUser.referenceId)
+    ? guru.find(g => g.id === currentUser.referenceId) ||
+      guru.find(g => g.nama.toLowerCase() === currentUser.name.toLowerCase()) ||
+      { id: currentUser.referenceId || 'gur-1', nama: currentUser.name, kodeGuru: 'GURU' }
     : null;
 
   if (loading) {
@@ -429,10 +431,15 @@ export default function App() {
               gurus={guru}
               kelas={kelas}
               mapel={mapel}
+              guruMengampu={guruMengampu}
               jurnals={jurnals}
               schoolInfo={schoolInfo}
               onPrintPreview={(type, classId, date) => setPrintModalParams({ type, classId, filterDate: date })}
               activeSubTab={activeTab}
+              onAddJurnal={handleAddJurnal}
+              onDeleteJurnal={handleDeleteJurnal}
+              showToast={showToast}
+              onNavigateTab={setActiveTab}
             />
           )}
 

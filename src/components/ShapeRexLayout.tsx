@@ -153,6 +153,12 @@ export default function ShapeRexLayout({
 
     // GURU TABS
     {
+      id: 'guru-input',
+      label: 'Input Jurnal Mengajar',
+      icon: <BookOpen className="w-4 h-4" />,
+      roles: ['guru']
+    },
+    {
       id: 'guru-dashboard',
       label: 'Dashboard Recap',
       icon: <Calendar className="w-4 h-4" />,
